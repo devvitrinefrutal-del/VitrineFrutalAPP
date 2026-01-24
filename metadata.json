@@ -1,0 +1,8 @@
+{
+  "name": "Vitrine Frutal",
+  "description": "Uma vitrine virtual moderna para o comércio local de Frutal, focada em produtos não perecíveis, serviços e cultura regional.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
