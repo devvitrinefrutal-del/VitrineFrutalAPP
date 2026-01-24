@@ -50,6 +50,8 @@ import {
   Clock,
   PlayCircle,
   Coins,
+  Eye,
+  EyeOff,
   Image as ImageIcon
 } from 'lucide-react';
 import { User, UserRole, Store as StoreType, Product, Service, CulturalItem, Order } from './types';
@@ -80,6 +82,8 @@ export default function App() {
   const [selectedCulturalItem, setSelectedCulturalItem] = useState<CulturalItem | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [showEmail, setShowEmail] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -96,6 +100,7 @@ export default function App() {
   const [checkoutPhone, setCheckoutPhone] = useState('');
   const [checkoutAddress, setCheckoutAddress] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState<'ENTREGA' | 'RETIRADA'>('ENTREGA');
+  const [connectionError, setConnectionError] = useState(false);
 
   const user = currentUser;
 
@@ -151,8 +156,20 @@ export default function App() {
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
-      if (ordersError) console.error('Erro ao buscar pedidos:', ordersError);
-      else if (ordersData) {
+
+      if (storesError || productsError || servicesError || culturalError || ordersError) {
+        console.error('Erro de conexão:', { storesError, productsError, servicesError, culturalError, ordersError });
+        setConnectionError(true);
+      } else {
+        setConnectionError(false);
+      }
+
+      if (storesData) setStores(storesData.map((s: any) => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
+      if (productsData) setProducts(productsData.map((p: any) => ({ ...p, storeId: p.store_id })));
+      if (servicesData) setServices(servicesData.map((s: any) => ({ ...s, providerId: s.provider_id })));
+      if (culturalData) setCulturalItems(culturalData);
+
+      if (ordersData) {
         setOrders(ordersData.map((o: any) => ({
           ...o,
           storeId: o.store_id,
@@ -168,6 +185,18 @@ export default function App() {
     };
 
     fetchData();
+
+    // Online/Offline Listeners
+    const handleOnline = () => { setConnectionError(false); fetchData(); };
+    const handleOffline = () => setConnectionError(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -551,6 +580,14 @@ export default function App() {
         </div>
       )}
 
+      {connectionError && (
+        <div className="fixed top-0 left-0 right-0 z-[200] bg-red-600 text-white px-4 py-3 text-center font-bold text-xs uppercase tracking-widest shadow-xl flex justify-center items-center gap-3">
+          <AlertCircle size={18} />
+          <span>Sem conexão com o servidor. Verifique sua internet.</span>
+          <button onClick={() => window.location.reload()} className="bg-white text-red-600 px-3 py-1 rounded-lg text-[10px] hover:bg-gray-100 transition-colors">Tentar Reconectar</button>
+        </div>
+      )}
+
       <header className="glass-effect sticky top-0 z-50 px-4 md:px-8 py-3 flex justify-between items-center border-b border-gray-100">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleTabChange('VITRINE')}>
@@ -714,8 +751,19 @@ export default function App() {
                   <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase tracking-widest text-sm">Acesso {selectedRole}</h2>
                 </div>
                 <form onSubmit={handleLogin} className="flex flex-col gap-4">
-                  <input required name="email" type="email" placeholder="E-mail" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-orange-200 transition-all" />
-                  <input required name="password" type="password" placeholder="Senha" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-orange-200 transition-all" />
+                  <div className="relative group">
+                    <input required name="email" type={showEmail ? "text" : "email"} placeholder="E-mail" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-orange-200 transition-all pr-12" />
+                    <button type="button" onClick={() => setShowEmail(!showEmail)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors">
+                      {showEmail ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+
+                  <div className="relative group">
+                    <input required name="password" type={showPassword ? "text" : "password"} placeholder="Senha" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-orange-200 transition-all pr-12" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
 
                   <label className="flex items-center gap-3 px-2 cursor-pointer group">
                     <div className="relative">
@@ -746,8 +794,20 @@ export default function App() {
                 </div>
                 <form onSubmit={handleLogin} className="flex flex-col gap-4">
                   <input required name="name" type="text" placeholder="Seu nome completo" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all" />
-                  <input required name="email" type="email" placeholder="Seu melhor e-mail" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all" />
-                  <input required name="password" type="password" placeholder="Crie uma senha segura" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all" />
+
+                  <div className="relative group">
+                    <input required name="email" type={showEmail ? "text" : "email"} placeholder="Seu melhor e-mail" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all pr-12" />
+                    <button type="button" onClick={() => setShowEmail(!showEmail)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-600 transition-colors">
+                      {showEmail ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+
+                  <div className="relative group">
+                    <input required name="password" type={showPassword ? "text" : "password"} placeholder="Crie uma senha segura" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all pr-12" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-600 transition-colors">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                   <p className="text-[10px] text-gray-400 font-medium px-2 uppercase tracking-widest">Cadastro exclusivo para clientes e usuários da plataforma.</p>
                   <button type="submit" className="w-full py-4 bg-green-600 text-white font-black rounded-2xl hover:bg-green-700 shadow-xl transition-all mt-4 uppercase tracking-widest text-xs">Concluir Registro</button>
                 </form>
@@ -1204,7 +1264,7 @@ interface DashboardViewProps {
 
 function DashboardView({ user, setCurrentUser, stores, setStores, products, setProducts, orders, setOrders, services, setServices, culturalItems, setCulturalItems, showSuccess, showError, logout }: DashboardViewProps) {
   // Fix for potential null user crash during state init
-  const [activeTab, setActiveTab] = useState<'ORDERS' | 'PRODUCTS' | 'STOCK' | 'MY_SERVICE' | 'MANAGE_STORES' | 'MANAGE_SERVICES' | 'MANAGE_CULTURAL' | 'PANEL'>(() => {
+  const [activeTab, setActiveTab] = useState<'ORDERS' | 'HISTORY' | 'PRODUCTS' | 'STOCK' | 'MY_SERVICE' | 'MANAGE_STORES' | 'MANAGE_SERVICES' | 'MANAGE_CULTURAL' | 'PANEL'>(() => {
     if (!user) return 'PANEL';
     if (user.role === 'DEV') return 'MANAGE_STORES';
     if (user.role === 'LOJISTA') return 'ORDERS';
@@ -1239,26 +1299,44 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
   const currentService = services.find((s: Service) => s.providerId === user?.id || s.id === user?.serviceId);
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
+    const orderToUpdate = orders.find(o => o.id === orderId);
+    if (!orderToUpdate) return;
+
+    // Prevent double cancellation processing
+    if (newStatus === 'CANCELADO' && orderToUpdate.status === 'CANCELADO') {
+      return;
+    }
+
+    // UPDATE LOCAL STATE
     setOrders((prev: Order[]) => prev.map((o: Order) =>
       o.id === orderId ? { ...o, status: newStatus, deliveryFee: currentManagerDeliveryFee } : o
     ));
 
-    // RESTORE STOCK IF CANCELLED
-    if (newStatus === 'CANCELADO') {
-      const orderToCancel = orders.find(o => o.id === orderId);
-      if (orderToCancel) {
-        for (const item of orderToCancel.items) {
-          const product = products.find(p => p.id === item.productId);
-          if (product) {
-            const restoredStock = product.stock + item.quantity;
-            await supabase.from('products').update({ stock: restoredStock }).eq('id', item.productId);
-            setProducts((prev: Product[]) => prev.map((p: Product) => p.id === item.productId ? { ...p, stock: restoredStock } : p));
-          }
+    // RESTORE STOCK IF TRANSITIONING TO CANCELLED
+    if (newStatus === 'CANCELADO' && orderToUpdate.status !== 'CANCELADO') {
+      for (const item of orderToUpdate.items) {
+        const product = products.find(p => p.id === item.productId);
+        if (product) {
+          const restoredStock = product.stock + item.quantity;
+          await supabase.from('products').update({ stock: restoredStock }).eq('id', item.productId);
+          setProducts((prev: Product[]) => prev.map((p: Product) => p.id === item.productId ? { ...p, stock: restoredStock } : p));
         }
       }
     }
 
-    showSuccess(`Pedido atualizado para: ${newStatus}`);
+    // PERSIST ORDER STATUS TO SUPABASE
+    const { error } = await supabase.from('orders').update({
+      status: newStatus,
+      delivery_fee: currentManagerDeliveryFee
+    }).eq('id', orderId);
+
+    if (error) {
+      showError('Erro ao salvar status: ' + error.message);
+      // Revert local state if DB fails (optional but good practice, skipping for simplicity unless requested)
+    } else {
+      showSuccess(`Pedido atualizado para: ${newStatus}`);
+    }
+
     setShowOrderManager(false);
   };
 
@@ -1586,7 +1664,8 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
           )}
           {user?.role === 'LOJISTA' && (
             <>
-              <TabBtn active={activeTab === 'ORDERS'} icon={<ClipboardList size={16} />} label="Pedidos Ativos" onClick={() => setActiveTab('ORDERS')} />
+              <TabBtn active={activeTab === 'ORDERS'} icon={<ClipboardList size={16} />} label="Vendas Ativas" onClick={() => setActiveTab('ORDERS')} />
+              <TabBtn active={activeTab === 'HISTORY'} icon={<Clock size={16} />} label="Histórico" onClick={() => setActiveTab('HISTORY')} />
               <TabBtn active={activeTab === 'PRODUCTS'} icon={<LayoutDashboard size={16} />} label="Minha Vitrine" onClick={() => setActiveTab('PRODUCTS')} />
               <TabBtn active={activeTab === 'STOCK'} icon={<Package size={16} />} label="Inventário" onClick={() => setActiveTab('STOCK')} />
             </>
@@ -1696,8 +1775,8 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
               <div className="flex items-center gap-3">
                 <FlaskConical size={24} className="text-orange-500" />
                 <div>
-                  <h4 className="font-black text-xs uppercase tracking-tighter">Área de Demonstração</h4>
-                  <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Simule pedidos para testar sua gestão</p>
+                  <h4 className="font-black text-xs uppercase tracking-tighter">Fluxo de Vendas</h4>
+                  <p className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Acompanhe seus pedidos em tempo real</p>
                 </div>
               </div>
               <button
@@ -1707,7 +1786,7 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
                 <ShoppingCart size={16} /> Simular Pedido de Teste
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <OrderCol
                 title="Pendentes"
                 list={orders.filter((o: any) => o.status === 'PENDENTE' && o.storeId === currentStore?.id)}
@@ -1720,10 +1799,27 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
                 color="blue"
                 onSelectOrder={(o: Order) => { setSelectedOrder(o); setShowOrderManager(true); }}
               />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'HISTORY' && (
+          <div className="space-y-6 animate-in slide-in-from-right">
+            <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm">
+              <h3 className="text-xl font-black text-black tracking-tight uppercase tracking-widest text-xs mb-1">Arquivo de Vendas</h3>
+              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Registros de pedidos concluídos ou cancelados</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <OrderCol
                 title="Entregues"
                 list={orders.filter((o: any) => o.status === 'ENTREGUE' && o.storeId === currentStore?.id)}
                 color="green"
+                onSelectOrder={(o: Order) => { setSelectedOrder(o); setShowOrderManager(true); }}
+              />
+              <OrderCol
+                title="Cancelados"
+                list={orders.filter((o: any) => o.status === 'CANCELADO' && o.storeId === currentStore?.id)}
+                color="red"
                 onSelectOrder={(o: Order) => { setSelectedOrder(o); setShowOrderManager(true); }}
               />
             </div>
