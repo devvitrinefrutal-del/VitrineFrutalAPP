@@ -75,6 +75,19 @@ interface CartItem {
   storeId: string;
 }
 
+// Helper function to normalize WhatsApp numbers with +55 prefix
+function normalizeWhatsApp(input: string): string {
+  if (!input) return '';
+  // Remove all non-numeric characters
+  const digitsOnly = input.replace(/\D/g, '');
+  // If already starts with 55, just add + and return
+  if (digitsOnly.startsWith('55')) {
+    return '+' + digitsOnly;
+  }
+  // Otherwise, add +55 prefix
+  return '+55' + digitsOnly;
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'VITRINE' | 'SERVICOS' | 'CULTURAL' | 'DASHBOARD' | 'CHECKOUT'>('VITRINE');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -1543,7 +1556,7 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
     const data: any = {
       name: fd.get('name') as string,
       category: fd.get('category') as string,
-      whatsapp: fd.get('whatsapp') as string,
+      whatsapp: normalizeWhatsApp(fd.get('whatsapp') as string),
       address: fd.get('address') as string,
       cnpj: fd.get('cnpj') as string,
       email: storeEmail,
@@ -1577,7 +1590,7 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
     const data: any = {
       name: fd.get('name') as string,
       type: fd.get('type') as string,
-      whatsapp: fd.get('whatsapp') as string,
+      whatsapp: normalizeWhatsApp(fd.get('whatsapp') as string),
       address: fd.get('address') as string,
       email: emailStr,
       description: fd.get('description') as string,
