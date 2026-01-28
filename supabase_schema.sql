@@ -50,7 +50,9 @@ CREATE TABLE services (
   description TEXT,
   price_estimate TEXT,
   image TEXT,
+  images TEXT[],
   whatsapp TEXT,
+  email TEXT,
   address TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );

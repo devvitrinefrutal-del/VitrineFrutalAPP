@@ -50,6 +50,7 @@ export interface Service {
   images?: string[];
   whatsapp: string;
   address: string;
+  email?: string; // Added for provider login/contact
   cnpj_cpf?: string;
 }
 

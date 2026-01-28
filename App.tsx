@@ -58,6 +58,7 @@ import {
 } from 'lucide-react';
 import { User, UserRole, Store as StoreType, Product, Service, CulturalItem, Order } from './types';
 import { supabase } from './supabaseClient';
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 // Mock Data initialization (Empty for live Supabase)
 const INITIAL_STORES: StoreType[] = [];
@@ -82,6 +83,7 @@ export default function App() {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [selectedStore, setSelectedStore] = useState<StoreType | null>(null);
   const [selectedCulturalItem, setSelectedCulturalItem] = useState<CulturalItem | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showEmail, setShowEmail] = useState(false);
@@ -582,6 +584,7 @@ export default function App() {
           </div>
         </div>
       )}
+      <SpeedInsights />
 
       {connectionError && (
         <div className="fixed top-0 left-0 right-0 z-[200] bg-red-600 text-white px-4 py-3 text-center font-bold text-xs uppercase tracking-widest shadow-xl flex justify-center items-center gap-3">
@@ -652,7 +655,8 @@ export default function App() {
           />
         )}
         {selectedStore && <StoreDetailView store={selectedStore} products={products.filter(p => p.storeId === selectedStore.id)} onBack={() => setSelectedStore(null)} onAddToCart={handleAddToCart} />}
-        {activeTab === 'SERVICOS' && <ServicosView services={services} onAction={(s) => {
+        {!selectedService && activeTab === 'SERVICOS' && <ServicosView services={services} onSelectService={setSelectedService} />}
+        {selectedService && <ServiceDetailView service={selectedService} onBack={() => setSelectedService(null)} onRequestQuote={(s) => {
           const msg = `Olá ${s.name}, vi seu perfil no Vitrine Frutal e gostaria de solicitar um orçamento para o serviço de ${s.type}.`;
           window.open(`https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
         }} />}
@@ -737,10 +741,9 @@ export default function App() {
                   <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tighter uppercase tracking-widest text-sm">Entrar no Sistema</h2>
                   <p className="text-gray-500 font-medium">Selecione seu perfil de acesso</p>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <RoleCard icon={<UserCircle className="text-green-500" size={24} />} title="Cliente" onClick={() => { setSelectedRole('CLIENTE'); setAuthMode('LOGIN'); }} />
                   <RoleCard icon={<StoreIcon className="text-orange-500" size={24} />} title="Lojista" onClick={() => { setSelectedRole('LOJISTA'); setAuthMode('LOGIN'); }} />
-                  <RoleCard icon={<Hammer className="text-blue-500" size={24} />} title="Serviços" onClick={() => { setSelectedRole('PRESTADOR'); setAuthMode('LOGIN'); }} />
                   <RoleCard icon={<ShieldCheck className="text-purple-500" size={24} />} title="DEV" onClick={() => { setSelectedRole('DEV'); setAuthMode('LOGIN'); }} />
                 </div>
                 <div className="pt-4 text-center border-t border-gray-100">
@@ -1049,10 +1052,7 @@ function VitrineView({ stores, products, onSelectStore, onAddToCart }: VitrineVi
               <div key={store.id} onClick={() => onSelectStore(store)} className="group cursor-pointer bg-white rounded-[3rem] overflow-hidden shadow-sm border border-gray-100 flex flex-col sm:flex-row h-full active:scale-[0.98] transition-all hover:shadow-2xl">
                 <div className="w-full sm:w-1/2 aspect-video sm:aspect-square overflow-hidden relative">
                   <img src={store.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                  <div className="absolute top-4 left-4 p-2 bg-white/90 backdrop-blur rounded-xl shadow-lg flex items-center gap-1">
-                    <Star size={12} className="text-yellow-500 fill-yellow-500" />
-                    <span className="text-[10px] font-black text-black">{store.rating}</span>
-                  </div>
+
                 </div>
                 <div className="p-10 flex flex-col justify-center flex-1">
                   <h3 className="font-black text-3xl text-black group-hover:text-green-600 transition-colors uppercase tracking-tighter leading-none mb-2">{store.name}</h3>
@@ -1110,16 +1110,16 @@ function StoreDetailView({ store, products, onBack, onAddToCart }: StoreDetailVi
 
 interface ServicosViewProps {
   services: Service[];
-  onAction: (service: Service) => void;
+  onSelectService: (service: Service) => void;
 }
 
-function ServicosView({ services, onAction }: ServicosViewProps) {
+function ServicosView({ services, onSelectService }: ServicosViewProps) {
   return (
     <div className="space-y-8 animate-in fade-in">
       <h2 className="text-3xl font-black text-black tracking-tighter uppercase tracking-widest text-sm">Prestadores em Frutal</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {services.map((service: Service) => (
-          <div key={service.id} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-8 hover:shadow-xl transition-all group">
+          <div key={service.id} onClick={() => onSelectService(service)} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-8 hover:shadow-xl transition-all group cursor-pointer active:scale-[0.98]">
             <img src={service.image} className="w-40 h-40 rounded-[2.5rem] object-cover shadow-xl group-hover:rotate-2 transition-transform" />
             <div className="flex-1 flex flex-col">
               <div className="mb-4">
@@ -1131,7 +1131,7 @@ function ServicosView({ services, onAction }: ServicosViewProps) {
                 <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase">
                   <DollarSign size={12} className="text-green-500" /> {service.priceEstimate}
                 </div>
-                <button onClick={() => onAction(service)} className="w-full px-6 py-4 bg-green-600 text-white text-[10px] font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-green-50 hover:bg-green-700 transition-all uppercase tracking-[0.2em]">Solicitar Orçamento</button>
+                <div className="font-black text-blue-600 text-[10px] flex items-center gap-2 group-hover:gap-4 transition-all uppercase tracking-[0.2em]">Ver Detalhes <ChevronRight size={18} /></div>
               </div>
             </div>
           </div>
@@ -1193,6 +1193,49 @@ function CulturalDetailView({ item, onBack }: CulturalDetailViewProps) {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {item.images.map((img: string, idx: number) => (
                   <img key={idx} src={img} className="w-full aspect-square object-cover rounded-3xl shadow-sm hover:scale-105 transition-transform" />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ServiceDetailViewProps {
+  service: Service;
+  onBack: () => void;
+  onRequestQuote: (service: Service) => void;
+}
+
+function ServiceDetailView({ service, onBack, onRequestQuote }: ServiceDetailViewProps) {
+  return (
+    <div className="space-y-8 animate-in fade-in max-w-4xl mx-auto">
+      <button onClick={onBack} className="text-blue-600 font-black flex items-center gap-2 group uppercase tracking-widest text-[10px]"><ArrowLeft className="group-hover:-translate-x-1 transition-transform" size={20} /> Voltar aos Serviços</button>
+      <div className="bg-white rounded-[4rem] overflow-hidden border border-gray-100 shadow-sm">
+        <img src={service.image} className="w-full aspect-video object-cover" />
+        <div className="p-10 md:p-20 space-y-10">
+          <div className="flex items-center gap-6">
+            <span className="px-6 py-2 bg-blue-100 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">{service.type}</span>
+            <span className="flex items-center gap-2 text-gray-400 text-[10px] font-black uppercase tracking-widest"><DollarSign size={14} className="text-green-500" /> {service.priceEstimate}</span>
+          </div>
+          <h2 className="text-5xl md:text-7xl font-black text-black leading-[0.9] tracking-tighter uppercase">{service.name}</h2>
+          <p className="text-xl text-gray-600 font-medium leading-relaxed whitespace-pre-wrap">{service.description}</p>
+
+          <button
+            onClick={() => onRequestQuote(service)}
+            className="w-full md:w-auto px-8 py-4 bg-green-600 text-white text-sm font-black rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-green-50 hover:bg-green-700 transition-all uppercase tracking-[0.2em]"
+          >
+            <MessageCircle size={20} /> Solicitar Orçamento via WhatsApp
+          </button>
+
+          {service.images && service.images.length > 0 && (
+            <div className="pt-10 border-t border-gray-100">
+              <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">Galeria de Fotos</h4>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {service.images.map((img: string, idx: number) => (
+                  <img key={idx} src={img} className="w-full aspect-square object-cover rounded-3xl shadow-sm hover:scale-105 transition-transform cursor-pointer" />
                 ))}
               </div>
             </div>
@@ -1526,37 +1569,57 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
     setUploadedImages([]);
   };
 
-  const handleSaveService = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveService = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const data = {
+    const emailStr = (fd.get('email') as string || '').trim().toLowerCase();
+
+    const data: any = {
       name: fd.get('name') as string,
       type: fd.get('type') as string,
       whatsapp: fd.get('whatsapp') as string,
       address: fd.get('address') as string,
+      email: emailStr,
       description: fd.get('description') as string,
-      priceEstimate: fd.get('priceEstimate') as string,
+      price_estimate: fd.get('priceEstimate') as string,
       image: uploadedImages[0] || (user?.role === 'PRESTADOR' ? currentService?.image : editingService?.image) || 'https://images.unsplash.com/photo-1581578731522-745d05ad9a2d?w=400&h=300&fit=crop',
-      images: uploadedImages
+      images: uploadedImages.length > 0 ? uploadedImages : (editingService?.images || [])
     };
 
     if (user?.role === 'PRESTADOR') {
       const activeServiceId = currentService?.id || user.serviceId;
       if (activeServiceId) {
-        setServices((prev: Service[]) => prev.map((s: Service) => s.id === activeServiceId ? { ...s, ...data } : s));
+        const { error } = await supabase.from('services').update(data).eq('id', activeServiceId);
+        if (error) { showError('Erro ao atualizar: ' + error.message); return; }
+
+        setServices((prev: Service[]) => prev.map((s: Service) => s.id === activeServiceId ? { ...s, ...data, priceEstimate: data.price_estimate, images: data.images } : s));
         showSuccess('Seu perfil profissional foi atualizado!');
       } else {
-        const newId = 'ser' + Date.now();
-        setServices((prev: Service[]) => [...prev, { id: newId, providerId: user.id, ...data }]);
-        setCurrentUser({ ...user, serviceId: newId });
+        const { data: saved, error } = await supabase.from('services').insert([{ ...data, provider_id: user.id }]).select();
+        if (error) { showError('Erro ao salvar: ' + error.message); return; }
+
+        if (saved) {
+          const newService = { ...saved[0], priceEstimate: saved[0].price_estimate, images: saved[0].images || [] };
+          setServices((prev: Service[]) => [...prev, newService]);
+          setCurrentUser({ ...user, serviceId: newService.id });
+        }
         showSuccess('Serviço cadastrado com sucesso!');
       }
     } else if (user?.role === 'DEV') {
       if (editingService) {
-        setServices((prev: Service[]) => prev.map((s: Service) => s.id === editingService.id ? { ...s, ...data } : s));
+        const { error } = await supabase.from('services').update(data).eq('id', editingService.id);
+        if (error) { showError('Erro ao atualizar: ' + error.message); return; }
+
+        setServices((prev: Service[]) => prev.map((s: Service) => s.id === editingService.id ? { ...s, ...data, priceEstimate: data.price_estimate, images: data.images } : s));
         showSuccess('Prestador atualizado pelo administrador!');
       } else {
-        setServices((prev: Service[]) => [...prev, { id: 'ser' + Date.now(), providerId: 'manual', ...data }]);
+        // For new services by DEV, provider_id is null initially
+        const { data: saved, error } = await supabase.from('services').insert([data]).select();
+        if (error) { showError('Erro ao salvar: ' + error.message); return; }
+
+        if (saved) {
+          setServices((prev: Service[]) => [...prev, { ...saved[0], priceEstimate: saved[0].price_estimate, providerId: 'manual', images: saved[0].images || [] }]);
+        }
         showSuccess('Novo prestador adicionado pela administração!');
       }
       setShowServiceModal(false);
@@ -2330,6 +2393,7 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
               <input required name="name" defaultValue={editingService?.name} placeholder="Nome do Especialista / Equipe" className="w-full p-5 bg-gray-50 rounded-2xl outline-none font-semibold text-black focus:ring-4 focus:ring-blue-100 border-2 border-transparent transition-all shadow-inner" />
               <input required name="type" defaultValue={editingService?.type} placeholder="Tipo de Serviço Prestado" className="w-full p-5 bg-gray-50 rounded-2xl outline-none font-semibold text-black focus:ring-4 focus:ring-blue-100 border-2 border-transparent transition-all shadow-inner" />
               <input required name="whatsapp" defaultValue={editingService?.whatsapp} placeholder="WhatsApp para Orçamentos" className="w-full p-5 bg-gray-50 rounded-2xl outline-none font-semibold text-black focus:ring-4 focus:ring-blue-100 border-2 border-transparent transition-all shadow-inner" />
+              <input required name="email" type="email" defaultValue={editingService?.email} placeholder="E-mail de Login do Prestador" className="w-full p-5 bg-gray-50 rounded-2xl outline-none font-semibold text-black focus:ring-4 focus:ring-blue-100 border-2 border-transparent transition-all shadow-inner" />
               <textarea required name="description" defaultValue={editingService?.description} placeholder="Apresentação e especialidades..." className="w-full p-5 bg-gray-50 rounded-2xl outline-none font-semibold text-black h-24 resize-none focus:ring-4 focus:ring-blue-100 border-2 border-transparent transition-all shadow-inner" />
               <input name="priceEstimate" defaultValue={editingService?.priceEstimate} placeholder="Estimativa de Custo Base" className="w-full p-5 bg-gray-50 rounded-2xl outline-none font-semibold text-black focus:ring-4 focus:ring-blue-100 border-2 border-transparent transition-all shadow-inner" />
               <input name="address" defaultValue={editingService?.address} placeholder="Região Atendida" className="w-full p-5 bg-gray-50 rounded-2xl outline-none font-semibold text-black focus:ring-4 focus:ring-blue-100 border-2 border-transparent transition-all shadow-inner" />
