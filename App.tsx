@@ -2315,7 +2315,7 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
                 <label className="text-[10px] font-black text-gray-400 uppercase ml-4 tracking-[0.3em] flex items-center gap-2">
                   <ImageIcon size={14} className="text-purple-500" /> Galeria de Imagens (Máx 10)
                 </label>
-                <MultiImageInput key={editingCulturalItem?.id || 'new-cult'} max={10} onImagesChange={setUploadedImages} initialImages={editingCulturalItem?.images || []} />
+                <MultiImageInput key={editingCulturalItem?.id || 'new-cult'} max={10} onImagesChange={setUploadedImages} initialImages={editingCulturalItem?.images || []} showError={showError} />
               </div>
 
               <button type="submit" className="w-full py-6 bg-purple-600 text-white font-black rounded-3xl shadow-2xl mt-6 hover:bg-purple-700 transition-all uppercase tracking-[0.4em] text-[10px]">Efetivar Registro Cultural</button>
@@ -2346,7 +2346,7 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
                 <label className="text-[10px] font-black text-gray-400 uppercase ml-4 tracking-[0.3em] flex items-center gap-2">
                   <ImageIcon size={14} className="text-orange-500" /> Fotos do Produto (Máx 5)
                 </label>
-                <MultiImageInput key={editingProduct?.id || 'new-prod'} max={5} onImagesChange={setUploadedImages} initialImages={editingProduct?.images || []} />
+                <MultiImageInput key={editingProduct?.id || 'new-prod'} max={5} onImagesChange={setUploadedImages} initialImages={editingProduct?.images || []} showError={showError} />
               </div>
 
               <button type="submit" className="w-full py-6 bg-orange-500 text-white font-black rounded-3xl shadow-2xl mt-6 active:scale-95 uppercase tracking-[0.4em] text-[10px]">Concluir Cadastro</button>
@@ -2383,7 +2383,7 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
                 <label className="text-[10px] font-black text-gray-400 uppercase ml-4 tracking-[0.3em] flex items-center gap-2">
                   <ImageIcon size={14} className="text-orange-500" /> Fotos do Estabelecimento (Máx 5)
                 </label>
-                <MultiImageInput key={editingStore?.id || 'new-store-dev'} max={5} onImagesChange={setUploadedImages} initialImages={editingStore?.images || []} />
+                <MultiImageInput key={editingStore?.id || 'new-store-dev'} max={5} onImagesChange={setUploadedImages} initialImages={editingStore?.images || []} showError={showError} />
               </div>
 
               <button type="submit" className="w-full py-6 bg-green-600 text-white font-black rounded-3xl shadow-2xl mt-6 hover:bg-green-700 transition-all uppercase tracking-[0.4em] text-[10px]">Efetivar Registro</button>
@@ -2415,7 +2415,7 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
                 <label className="text-[10px] font-black text-gray-400 uppercase ml-4 tracking-[0.3em] flex items-center gap-2">
                   <ImageIcon size={14} className="text-orange-500" /> Fotos do Serviço (Máx 5)
                 </label>
-                <MultiImageInput key={editingService?.id || 'new-service-dev'} max={5} onImagesChange={setUploadedImages} initialImages={editingService?.images || []} />
+                <MultiImageInput key={editingService?.id || 'new-service-dev'} max={5} onImagesChange={setUploadedImages} initialImages={editingService?.images || []} showError={showError} />
               </div>
 
               <button type="submit" className="w-full py-6 bg-blue-600 text-white font-black rounded-3xl shadow-2xl mt-6 hover:bg-blue-700 transition-all uppercase tracking-[0.4em] text-[10px]">Incluir na Base</button>
@@ -2502,9 +2502,10 @@ function OrderCol({ title, list, color, onSelectOrder }: OrderColProps) {
 interface ImageInputProps {
   onImage: (img: string) => void;
   initial: string | null | undefined;
+  showError?: (msg: string) => void;
 }
 
-function ImageInput({ onImage, initial }: ImageInputProps) {
+function ImageInput({ onImage, initial, showError }: ImageInputProps) {
   const [prev, setPrev] = useState(initial);
 
   useEffect(() => {
@@ -2514,6 +2515,22 @@ function ImageInput({ onImage, initial }: ImageInputProps) {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size (2MB = 2 * 1024 * 1024 bytes)
+      const maxSize = 2 * 1024 * 1024;
+      if (file.size > maxSize) {
+        showError?.(`Imagem muito grande! Tamanho máximo: 2MB. Sua imagem: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+        e.target.value = ''; // Clear input
+        return;
+      }
+
+      // Validate file format
+      const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedFormats.includes(file.type)) {
+        showError?.('Formato inválido! Use apenas JPG, PNG ou WebP.');
+        e.target.value = '';
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         const b64 = reader.result as string;
@@ -2536,13 +2553,32 @@ function ImageInput({ onImage, initial }: ImageInputProps) {
   );
 }
 
-function MultiImageInput({ max, onImagesChange, initialImages, key }: { max: number, onImagesChange: (imgs: string[]) => void, initialImages: string[], key?: any }) {
+function MultiImageInput({ max, onImagesChange, initialImages, key, showError }: { max: number, onImagesChange: (imgs: string[]) => void, initialImages: string[], key?: any, showError?: (msg: string) => void }) {
   const [images, setImages] = useState<string[]>(initialImages);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []) as File[];
     const remaining = max - images.length;
     const toProcess = files.slice(0, remaining);
+
+    // Validate each file
+    for (const file of toProcess) {
+      // Validate file size (2MB max)
+      const maxSize = 2 * 1024 * 1024;
+      if (file.size > maxSize) {
+        showError?.(`Imagem "${file.name}" muito grande! M\u00e1ximo: 2MB. Tamanho: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+        e.target.value = '';
+        return;
+      }
+
+      // Validate file format
+      const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedFormats.includes(file.type)) {
+        showError?.(`Formato inv\u00e1lido em "${file.name}"! Use apenas JPG, PNG ou WebP.`);
+        e.target.value = '';
+        return;
+      }
+    }
 
     toProcess.forEach(file => {
       const reader = new FileReader();
@@ -2556,6 +2592,7 @@ function MultiImageInput({ max, onImagesChange, initialImages, key }: { max: num
       };
       reader.readAsDataURL(file as Blob);
     });
+    e.target.value = ''; // Clear input after processing
   };
 
   const removeImage = (index: number) => {
