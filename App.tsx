@@ -52,7 +52,9 @@ import {
   Coins,
   Eye,
   EyeOff,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Search,
+  Filter
 } from 'lucide-react';
 import { User, UserRole, Store as StoreType, Product, Service, CulturalItem, Order } from './types';
 import { supabase } from './supabaseClient';
@@ -361,13 +363,14 @@ export default function App() {
         }
 
         if (store) {
-          const itemsList = cart.map(i => `• ${i.quantity}x ${i.name} (R$ ${i.price.toFixed(2)})`).join('%0A');
+          const itemsList = cart.map(i => `• ${i.quantity}x ${i.name} (R$ ${i.price.toFixed(2)})`).join('\n');
           const methodLabel = deliveryMethod === 'ENTREGA' ? 'Entrega em domicílio' : 'Retirada na Loja';
           const addressInfo = deliveryMethod === 'ENTREGA' ? `*Endereço:* ${checkoutAddress}` : `*Retirada pelo cliente na Loja:* ${store.name}`;
-          const feeText = deliveryMethod === 'ENTREGA' ? `%0A*Taxa de Entrega:* R$ ${activeDeliveryFee.toFixed(2)}` : '';
+          const feeText = deliveryMethod === 'ENTREGA' ? `\n*Taxa de Entrega:* R$ ${activeDeliveryFee.toFixed(2)}` : '';
 
-          const message = `*Novo Pedido #${savedOrder.id.slice(0, 5)} - Vitrine Frutal*%0A%0A*Cliente:* ${checkoutName}%0A*WhatsApp:* ${checkoutPhone}%0A*Método:* ${methodLabel}${feeText}%0A*Total Final:* R$ ${cartGrandTotal.toFixed(2)}%0A%0A*Itens:*%0A${itemsList}%0A%0A${addressInfo}`;
-          const waUrl = `https://wa.me/${store.whatsapp.replace(/\D/g, '')}?text=${message}`;
+          const message = `*Novo Pedido #${savedOrder.id.slice(0, 5)} - Vitrine Frutal*\n\n*Cliente:* ${checkoutName}\n*WhatsApp:* ${checkoutPhone}\n*Método:* ${methodLabel}${feeText}\n*Total Final:* R$ ${cartGrandTotal.toFixed(2)}\n\n*Itens:*\n${itemsList}\n\n${addressInfo}`;
+
+          const waUrl = `https://wa.me/${store.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
           window.open(waUrl, '_blank');
         }
 
@@ -640,7 +643,14 @@ export default function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-8">
-        {!selectedStore && activeTab === 'VITRINE' && <VitrineView stores={stores} onSelectStore={setSelectedStore} />}
+        {!selectedStore && activeTab === 'VITRINE' && (
+          <VitrineView
+            stores={stores}
+            products={products}
+            onSelectStore={setSelectedStore}
+            onAddToCart={handleAddToCart}
+          />
+        )}
         {selectedStore && <StoreDetailView store={selectedStore} products={products.filter(p => p.storeId === selectedStore.id)} onBack={() => setSelectedStore(null)} onAddToCart={handleAddToCart} />}
         {activeTab === 'SERVICOS' && <ServicosView services={services} onAction={(s) => {
           const msg = `Olá ${s.name}, vi seu perfil no Vitrine Frutal e gostaria de solicitar um orçamento para o serviço de ${s.type}.`;
@@ -902,66 +912,158 @@ function HeaderNavButton({ active, onClick, icon, label }: HeaderNavButtonProps)
   );
 }
 
+
+
 interface VitrineViewProps {
   stores: StoreType[];
+  products: Product[]; // Now receives products for search
   onSelectStore: (store: StoreType) => void;
+  onAddToCart: (product: Product) => void;
 }
 
-function VitrineView({ stores, onSelectStore }: VitrineViewProps) {
+function VitrineView({ stores, products, onSelectStore, onAddToCart }: VitrineViewProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [priceRange, setPriceRange] = useState<{ min: string, max: string }>({ min: '', max: '' });
+
+  // Filter Logic
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesMinPrice = priceRange.min ? p.price >= parseFloat(priceRange.min) : true;
+    const matchesMaxPrice = priceRange.max ? p.price <= parseFloat(priceRange.max) : true;
+    return matchesSearch && matchesMinPrice && matchesMaxPrice;
+  });
+
+  const hasActiveFilters = searchQuery.length > 0 || priceRange.min !== '' || priceRange.max !== '';
+
   return (
-    <div className="space-y-12 animate-in fade-in">
-      <div className="relative w-full py-16 px-6 md:py-24 overflow-hidden rounded-[3rem] md:rounded-[4rem] shadow-2xl group border-4 border-white bg-green-800">
+    <div className="space-y-8 animate-in fade-in">
+      {/* Hero Header with Search */}
+      <div className="relative w-full py-12 px-6 md:py-20 overflow-hidden rounded-[3rem] shadow-2xl group border-4 border-white bg-green-800">
         <div
           className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 opacity-60 mix-blend-luminosity"
           style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1594833211511-0985f957017c?w=1600&q=80")' }}
         ></div>
         <div className="absolute inset-0 bg-gradient-to-t from-green-950/90 via-green-900/40 to-green-800/60"></div>
 
-        <div className="relative z-10 text-center space-y-6">
-          <div className="flex flex-col items-center gap-4 mb-4 animate-in slide-in-from-top duration-1000">
-            <div className="p-3 bg-white/10 backdrop-blur-2xl rounded-[2rem] border border-white/20 shadow-2xl scale-110 mb-2">
+        <div className="relative z-10 flex flex-col items-center gap-8">
+          <div className="text-center space-y-2">
+            <div className="inline-block p-3 bg-white/10 backdrop-blur-2xl rounded-[2rem] border border-white/20 shadow-2xl mb-4">
               <Logo />
             </div>
-            <h1 className="text-4xl md:text-7xl font-black text-white tracking-tighter uppercase drop-shadow-2xl">
+            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter uppercase drop-shadow-2xl">
               Vitrine<span className="text-orange-400">Frutal</span>
             </h1>
-          </div>
-          <div className="max-w-3xl mx-auto space-y-4">
-            <p className="text-xl md:text-3xl font-black text-white tracking-tight italic drop-shadow-lg animate-in fade-in slide-in-from-bottom duration-1000 delay-300">
+            <p className="text-sm md:text-lg font-black text-white/80 tracking-widest uppercase">
               "Se tem em Frutal, está na vitrine"
             </p>
-            <div className="w-32 h-2 bg-orange-500 mx-auto rounded-full shadow-lg mt-4"></div>
           </div>
+
+          <div className="w-full max-w-2xl bg-white p-2 rounded-2xl flex shadow-2xl shadow-green-900/50 relative z-20">
+            <div className="flex-1 flex items-center px-4 gap-3">
+              <Search className="text-gray-400" size={20} />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="O que você procura hoje?"
+                className="w-full py-3 bg-transparent outline-none font-bold text-gray-700 placeholder-gray-400"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-6 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 transition-all ${hasActiveFilters ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+            >
+              <Filter size={16} /> Filtros
+            </button>
+          </div>
+
+          {showFilters && (
+            <div className="w-full max-w-2xl bg-white p-6 rounded-3xl shadow-xl animate-in slide-in-from-top-4 flex flex-col md:flex-row gap-6 items-end">
+              <div className="flex-1 w-full grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-2">Preço Mín.</label>
+                  <input type="number" value={priceRange.min} onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })} className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold text-sm" placeholder="R$ 0,00" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-2">Preço Máx.</label>
+                  <input type="number" value={priceRange.max} onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })} className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold text-sm" placeholder="R$ Máximo" />
+                </div>
+              </div>
+              <button onClick={() => { setSearchQuery(''); setPriceRange({ min: '', max: '' }); setShowFilters(false); }} className="w-full md:w-auto px-6 py-4 bg-red-50 text-red-500 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-red-100 transition-colors">
+                Limpar
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="space-y-8">
-        <div className="flex items-center justify-between px-2">
-          <h2 className="text-2xl font-black text-black tracking-tighter uppercase tracking-widest text-[10px]">Estabelecimentos Parceiros</h2>
-          <div className="flex items-center gap-2">
-            <MapPin size={14} className="text-orange-500" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Frutal • MG</span>
+      {hasActiveFilters ? (
+        <div className="space-y-8">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xl font-black text-black tracking-tighter uppercase tracking-widest">
+              Resultados da Busca <span className="text-gray-400 text-sm ml-2">({filteredProducts.length} itens)</span>
+            </h2>
           </div>
+          {filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {filteredProducts.map(p => {
+                const store = stores.find(s => s.id === p.storeId);
+                return (
+                  <div key={p.id} className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col group hover:shadow-xl transition-all">
+                    <div className="relative overflow-hidden rounded-2xl mb-4 aspect-square">
+                      <img src={p.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      {store && (
+                        <div className="absolute bottom-2 left-2 px-3 py-1 bg-white/90 backdrop-blur rounded-lg shadow-sm text-[8px] font-black uppercase tracking-widest text-black/70">
+                          {store.name}
+                        </div>
+                      )}
+                    </div>
+                    <h4 className="font-black text-black text-sm leading-tight uppercase tracking-tighter mb-1 line-clamp-2 min-h-[2.5em]">{p.name}</h4>
+                    <div className="flex justify-between items-end mt-auto">
+                      <span className="text-lg font-black text-green-600">R$ {p.price.toFixed(2)}</span>
+                      <button onClick={() => onAddToCart(p)} className="p-2 bg-gray-900 text-white rounded-xl hover:bg-orange-500 transition-colors shadow-lg shadow-gray-200">
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-20 bg-gray-50 rounded-[3rem]">
+              <p className="text-gray-400 font-bold uppercase tracking-widest text-sm">Nenhum produto encontrado</p>
+            </div>
+          )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
-          {stores.map((store: StoreType) => (
-            <div key={store.id} onClick={() => onSelectStore(store)} className="group cursor-pointer bg-white rounded-[3rem] overflow-hidden shadow-sm border border-gray-100 flex flex-col sm:flex-row h-full active:scale-[0.98] transition-all hover:shadow-2xl">
-              <div className="w-full sm:w-1/2 aspect-video sm:aspect-square overflow-hidden relative">
-                <img src={store.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                <div className="absolute top-4 left-4 p-2 bg-white/90 backdrop-blur rounded-xl shadow-lg flex items-center gap-1">
-                  <Star size={12} className="text-yellow-500 fill-yellow-500" />
-                  <span className="text-[10px] font-black text-black">{store.rating}</span>
+      ) : (
+        <div className="space-y-8">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-2xl font-black text-black tracking-tighter uppercase tracking-widest text-[10px]">Estabelecimentos Parceiros</h2>
+            <div className="flex items-center gap-2">
+              <MapPin size={14} className="text-orange-500" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Frutal • MG</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
+            {stores.map((store: StoreType) => (
+              <div key={store.id} onClick={() => onSelectStore(store)} className="group cursor-pointer bg-white rounded-[3rem] overflow-hidden shadow-sm border border-gray-100 flex flex-col sm:flex-row h-full active:scale-[0.98] transition-all hover:shadow-2xl">
+                <div className="w-full sm:w-1/2 aspect-video sm:aspect-square overflow-hidden relative">
+                  <img src={store.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                  <div className="absolute top-4 left-4 p-2 bg-white/90 backdrop-blur rounded-xl shadow-lg flex items-center gap-1">
+                    <Star size={12} className="text-yellow-500 fill-yellow-500" />
+                    <span className="text-[10px] font-black text-black">{store.rating}</span>
+                  </div>
+                </div>
+                <div className="p-10 flex flex-col justify-center flex-1">
+                  <h3 className="font-black text-3xl text-black group-hover:text-green-600 transition-colors uppercase tracking-tighter leading-none mb-2">{store.name}</h3>
+                  <p className="text-gray-400 text-[10px] mb-6 font-black uppercase tracking-[0.2em]">{store.category}</p>
+                  <div className="mt-auto font-black text-green-600 text-[10px] flex items-center gap-2 group-hover:gap-4 transition-all uppercase tracking-[0.2em]">Ver Coleção Completa <ChevronRight size={18} /></div>
                 </div>
               </div>
-              <div className="p-10 flex flex-col justify-center flex-1">
-                <h3 className="font-black text-3xl text-black group-hover:text-green-600 transition-colors uppercase tracking-tighter leading-none mb-2">{store.name}</h3>
-                <p className="text-gray-400 text-[10px] mb-6 font-black uppercase tracking-[0.2em]">{store.category}</p>
-                <div className="mt-auto font-black text-green-600 text-[10px] flex items-center gap-2 group-hover:gap-4 transition-all uppercase tracking-[0.2em]">Ver Coleção Completa <ChevronRight size={18} /></div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -1286,6 +1388,7 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
   const [uploadedStoreLogo, setUploadedStoreLogo] = useState<string | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 
   const [currentManagerDeliveryFee, setCurrentManagerDeliveryFee] = useState<number>(0);
 
@@ -1299,6 +1402,8 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
   const currentService = services.find((s: Service) => s.providerId === user?.id || s.id === user?.serviceId);
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
+    if (isUpdatingOrder) return;
+
     const orderToUpdate = orders.find(o => o.id === orderId);
     if (!orderToUpdate) return;
 
@@ -1307,37 +1412,42 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
       return;
     }
 
-    // UPDATE LOCAL STATE
-    setOrders((prev: Order[]) => prev.map((o: Order) =>
-      o.id === orderId ? { ...o, status: newStatus, deliveryFee: currentManagerDeliveryFee } : o
-    ));
+    setIsUpdatingOrder(true);
 
-    // RESTORE STOCK IF TRANSITIONING TO CANCELLED
-    if (newStatus === 'CANCELADO' && orderToUpdate.status !== 'CANCELADO') {
-      for (const item of orderToUpdate.items) {
-        const product = products.find(p => p.id === item.productId);
-        if (product) {
-          const restoredStock = product.stock + item.quantity;
-          await supabase.from('products').update({ stock: restoredStock }).eq('id', item.productId);
-          setProducts((prev: Product[]) => prev.map((p: Product) => p.id === item.productId ? { ...p, stock: restoredStock } : p));
+    try {
+      // UPDATE LOCAL STATE
+      setOrders((prev: Order[]) => prev.map((o: Order) =>
+        o.id === orderId ? { ...o, status: newStatus, deliveryFee: currentManagerDeliveryFee } : o
+      ));
+
+      // RESTORE STOCK IF TRANSITIONING TO CANCELLED
+      if (newStatus === 'CANCELADO' && orderToUpdate.status !== 'CANCELADO') {
+        for (const item of orderToUpdate.items) {
+          const product = products.find(p => p.id === item.productId);
+          if (product) {
+            const restoredStock = product.stock + item.quantity;
+            await supabase.from('products').update({ stock: restoredStock }).eq('id', item.productId);
+            setProducts((prev: Product[]) => prev.map((p: Product) => p.id === item.productId ? { ...p, stock: restoredStock } : p));
+          }
         }
       }
+
+      // PERSIST ORDER STATUS TO SUPABASE
+      const { error } = await supabase.from('orders').update({
+        status: newStatus,
+        delivery_fee: currentManagerDeliveryFee
+      }).eq('id', orderId);
+
+      if (error) {
+        showError('Erro ao salvar status: ' + error.message);
+      } else {
+        showSuccess(`Pedido atualizado para: ${newStatus}`);
+      }
+
+      setShowOrderManager(false);
+    } finally {
+      setIsUpdatingOrder(false);
     }
-
-    // PERSIST ORDER STATUS TO SUPABASE
-    const { error } = await supabase.from('orders').update({
-      status: newStatus,
-      delivery_fee: currentManagerDeliveryFee
-    }).eq('id', orderId);
-
-    if (error) {
-      showError('Erro ao salvar status: ' + error.message);
-      // Revert local state if DB fails (optional but good practice, skipping for simplicity unless requested)
-    } else {
-      showSuccess(`Pedido atualizado para: ${newStatus}`);
-    }
-
-    setShowOrderManager(false);
   };
 
   const handleSaveManagerDeliveryFee = () => {
@@ -2077,29 +2187,32 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {selectedOrder.status === 'PENDENTE' && (
                 <button
+                  disabled={isUpdatingOrder}
                   onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'PREPARANDO')}
-                  className="w-full py-5 bg-blue-600 text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:bg-blue-700 transition-all uppercase tracking-widest text-[10px]"
+                  className="w-full py-5 bg-blue-600 text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:bg-blue-700 transition-all uppercase tracking-widest text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <PlayCircle size={20} /> Iniciar Preparo
+                  <PlayCircle size={20} /> {isUpdatingOrder ? 'Processando...' : 'Iniciar Preparo'}
                 </button>
               )}
               {selectedOrder.status === 'PREPARANDO' && (
                 <button
+                  disabled={isUpdatingOrder}
                   onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'ENTREGUE')}
-                  className="w-full py-5 bg-green-600 text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:bg-green-700 transition-all uppercase tracking-widest text-[10px]"
+                  className="w-full py-5 bg-green-600 text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:bg-green-700 transition-all uppercase tracking-widest text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <CheckCircle size={20} /> Marcar como Entregue
+                  <CheckCircle size={20} /> {isUpdatingOrder ? 'Processando...' : 'Marcar como Entregue'}
                 </button>
               )}
               <button
+                disabled={isUpdatingOrder}
                 onClick={() => {
                   if (confirm("Deseja realmente cancelar este pedido?")) {
                     handleUpdateOrderStatus(selectedOrder.id, 'CANCELADO');
                   }
                 }}
-                className="w-full py-5 bg-gray-50 text-red-500 font-black rounded-2xl hover:bg-red-50 transition-all uppercase tracking-widest text-[10px]"
+                className="w-full py-5 bg-gray-50 text-red-500 font-black rounded-2xl hover:bg-red-50 transition-all uppercase tracking-widest text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Cancelar Pedido
+                {isUpdatingOrder ? 'Processando...' : 'Cancelar Pedido'}
               </button>
             </div>
           </div>
