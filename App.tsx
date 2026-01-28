@@ -59,6 +59,7 @@ import {
 import { User, UserRole, Store as StoreType, Product, Service, CulturalItem, Order } from './types';
 import { supabase } from './supabaseClient';
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { Analytics } from "@vercel/analytics/react";
 
 // Mock Data initialization (Empty for live Supabase)
 const INITIAL_STORES: StoreType[] = [];
@@ -598,6 +599,7 @@ export default function App() {
         </div>
       )}
       <SpeedInsights />
+      <Analytics />
 
       {connectionError && (
         <div className="fixed top-0 left-0 right-0 z-[200] bg-red-600 text-white px-4 py-3 text-center font-bold text-xs uppercase tracking-widest shadow-xl flex justify-center items-center gap-3">
