@@ -143,6 +143,7 @@ export default function App() {
           import.meta.env.VITE_SUPABASE_URL.includes('placeholder');
 
         if (isPlaceholder) {
+          showError("ERRO: Segredos do banco não encontrados na Vercel (VITE_...).");
           console.error("Variáveis de ambiente do Supabase não configuradas!");
           setConnectionError(true);
           clearTimeout(timeoutId);
@@ -515,189 +516,197 @@ export default function App() {
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const email = (formData.get('email') as string).trim().toLowerCase();
-    const password = (formData.get('password') as string).trim();
-    const name = formData.get('name') as string || 'Usuário';
+    try {
+      showSuccess('Iniciando tentativa de entrada...');
+      const formData = new FormData(e.currentTarget);
+      const email = (formData.get('email') as string).trim().toLowerCase();
+      const password = (formData.get('password') as string).trim();
+      const name = formData.get('name') as string || 'Usuário';
 
-    const isAuthorizedDev = email === 'devvitrinefrutal@gmail.com';
+      const isAuthorizedDev = email === 'devvitrinefrutal@gmail.com';
 
-    if (authMode === 'LOGIN') {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          showError('E-mail ou senha incorretos. Verifique seus dados.');
-        } else {
-          showError(`Erro no login: ${error.message}`);
+      if (authMode === 'LOGIN') {
+        showSuccess('Conectando ao banco...');
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            showError('E-mail ou senha incorretos. Verifique seus dados.');
+          } else {
+            showError(`Erro no login: ${error.message}`);
+          }
+          return;
         }
-        return;
-      }
 
-      let { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+        let { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
 
-      if (isAuthorizedDev) {
-        if (!profile) {
-          const newDev: User = {
+        if (isAuthorizedDev) {
+          if (!profile) {
+            const newDev: User = {
+              id: data.user.id,
+              name: 'Desenvolvedor Master',
+              email,
+              role: 'DEV',
+              phone: '',
+              document: '',
+              address: ''
+            };
+            const { error: devInsertError } = await supabase.from('profiles').insert([newDev]);
+            if (devInsertError) console.error("Erro ao criar perfil DEV:", devInsertError);
+            profile = newDev;
+          } else if (profile.role !== 'DEV') {
+            await supabase.from('profiles').update({ role: 'DEV' }).eq('id', data.user.id);
+            profile.role = 'DEV';
+          }
+        }
+
+        if (profile) {
+          showSuccess(`Perfil ${profile.role} identificado!`);
+          if (profile.role === 'DEV' && !isAuthorizedDev) {
+            showError('Acesso Negado: Este e-mail não é autorizado como Desenvolvedor.');
+            await supabase.auth.signOut();
+            return;
+          }
+
+          // AUTO-LINK & AUTO-UPGRADE: Verificar se o email dele agora está em uma loja/serviço master sem dono
+          const { data: storeMatch } = await supabase.from('stores').select('id, owner_id').eq('email', email).maybeSingle();
+          const { data: serviceMatch } = await supabase.from('services').select('id, provider_id').eq('email', email).maybeSingle();
+
+          if (storeMatch && !storeMatch.owner_id) {
+            // Se encontrou loja e não tem dono, vincula e garante cargo LOJISTA
+            await supabase.from('profiles').update({ role: 'LOJISTA' }).eq('id', profile.id);
+            await supabase.from('stores').update({ owner_id: profile.id }).eq('id', storeMatch.id);
+            profile.role = 'LOJISTA';
+            profile.storeId = storeMatch.id;
+            setStores(prev => prev.map(s => s.id === storeMatch.id ? { ...s, ownerId: profile.id } : s));
+            showSuccess('Sua loja foi vinculada com sucesso!');
+          } else if (serviceMatch && !serviceMatch.provider_id) {
+            // Se encontrou serviço e não tem dono, vincula e garante cargo PRESTADOR
+            await supabase.from('profiles').update({ role: 'PRESTADOR' }).eq('id', profile.id);
+            await supabase.from('services').update({ provider_id: profile.id }).eq('id', serviceMatch.id);
+            profile.role = 'PRESTADOR';
+            profile.serviceId = serviceMatch.id;
+            setServices(prev => prev.map(s => s.id === serviceMatch.id ? { ...s, providerId: profile.id } : s));
+            showSuccess('Seu perfil profissional foi vinculado!');
+          } else if (profile.role === 'LOJISTA' && storeMatch && storeMatch.owner_id === profile.id) {
+            // Garantir que o storeId está no objeto local se já estiver vinculado no banco
+            profile.storeId = storeMatch.id;
+          } else if (profile.role === 'PRESTADOR' && serviceMatch && serviceMatch.provider_id === profile.id) {
+            profile.serviceId = serviceMatch.id;
+          }
+
+          setCurrentUser(profile);
+        } else {
+          // Se o login funcionou mas não tem perfil, cria um perfil básico de CLIENTE
+          const newUser: User = {
             id: data.user.id,
-            name: 'Desenvolvedor Master',
-            email,
-            role: 'DEV',
+            name: name || 'Usuário',
+            email: email,
+            role: 'CLIENTE',
             phone: '',
             document: '',
             address: ''
           };
-          const { error: devInsertError } = await supabase.from('profiles').insert([newDev]);
-          if (devInsertError) console.error("Erro ao criar perfil DEV:", devInsertError);
-          profile = newDev;
-        } else if (profile.role !== 'DEV') {
-          await supabase.from('profiles').update({ role: 'DEV' }).eq('id', data.user.id);
-          profile.role = 'DEV';
+          const { error: insertError } = await supabase.from('profiles').insert([newUser]);
+          if (insertError) {
+            showError(`Erro ao criar perfil: ${insertError.message}`);
+            await supabase.auth.signOut();
+          } else {
+            setCurrentUser(newUser);
+            showSuccess('Login realizado (novo perfil criado)');
+          }
         }
-      }
+      } else if (authMode === 'REGISTER') {
+        let finalRole: UserRole = selectedRole || 'CLIENTE';
 
-      if (profile) {
-        if (profile.role === 'DEV' && !isAuthorizedDev) {
-          showError('Acesso Negado: Este e-mail não é autorizado como Desenvolvedor.');
-          await supabase.auth.signOut();
-          return;
-        }
-
-        // AUTO-LINK & AUTO-UPGRADE: Verificar se o email dele agora está em uma loja/serviço master sem dono
+        // Verificar se o e-mail já existe nas tabelas master para AUTO-DETECTAR o cargo
         const { data: storeMatch } = await supabase.from('stores').select('id, owner_id').eq('email', email).maybeSingle();
         const { data: serviceMatch } = await supabase.from('services').select('id, provider_id').eq('email', email).maybeSingle();
 
-        if (storeMatch && !storeMatch.owner_id) {
-          // Se encontrou loja e não tem dono, vincula e garante cargo LOJISTA
-          await supabase.from('profiles').update({ role: 'LOJISTA' }).eq('id', profile.id);
-          await supabase.from('stores').update({ owner_id: profile.id }).eq('id', storeMatch.id);
-          profile.role = 'LOJISTA';
-          profile.storeId = storeMatch.id;
-          setStores(prev => prev.map(s => s.id === storeMatch.id ? { ...s, ownerId: profile.id } : s));
-          showSuccess('Sua loja foi vinculada com sucesso!');
-        } else if (serviceMatch && !serviceMatch.provider_id) {
-          // Se encontrou serviço e não tem dono, vincula e garante cargo PRESTADOR
-          await supabase.from('profiles').update({ role: 'PRESTADOR' }).eq('id', profile.id);
-          await supabase.from('services').update({ provider_id: profile.id }).eq('id', serviceMatch.id);
-          profile.role = 'PRESTADOR';
-          profile.serviceId = serviceMatch.id;
-          setServices(prev => prev.map(s => s.id === serviceMatch.id ? { ...s, providerId: profile.id } : s));
-          showSuccess('Seu perfil profissional foi vinculado!');
-        } else if (profile.role === 'LOJISTA' && storeMatch && storeMatch.owner_id === profile.id) {
-          // Garantir que o storeId está no objeto local se já estiver vinculado no banco
-          profile.storeId = storeMatch.id;
-        } else if (profile.role === 'PRESTADOR' && serviceMatch && serviceMatch.provider_id === profile.id) {
-          profile.serviceId = serviceMatch.id;
-        }
-
-        setCurrentUser(profile);
-      } else {
-        // Se o login funcionou mas não tem perfil, cria um perfil básico de CLIENTE
-        const newUser: User = {
-          id: data.user.id,
-          name: name || 'Usuário',
-          email: email,
-          role: 'CLIENTE',
-          phone: '',
-          document: '',
-          address: ''
-        };
-        const { error: insertError } = await supabase.from('profiles').insert([newUser]);
-        if (insertError) {
-          showError(`Erro ao criar perfil: ${insertError.message}`);
-          await supabase.auth.signOut();
-        } else {
-          setCurrentUser(newUser);
-          showSuccess('Login realizado (novo perfil criado)');
-        }
-      }
-    } else if (authMode === 'REGISTER') {
-      let finalRole: UserRole = selectedRole || 'CLIENTE';
-
-      // Verificar se o e-mail já existe nas tabelas master para AUTO-DETECTAR o cargo
-      const { data: storeMatch } = await supabase.from('stores').select('id, owner_id').eq('email', email).maybeSingle();
-      const { data: serviceMatch } = await supabase.from('services').select('id, provider_id').eq('email', email).maybeSingle();
-
-      if (storeMatch) {
-        if (storeMatch.owner_id) {
-          showError('Este e-mail já está vinculado a uma loja existente.');
+        if (storeMatch) {
+          if (storeMatch.owner_id) {
+            showError('Este e-mail já está vinculado a uma loja existente.');
+            return;
+          }
+          finalRole = 'LOJISTA';
+        } else if (serviceMatch) {
+          if (serviceMatch.provider_id) {
+            showError('Este e-mail já está vinculado a um perfil de serviço prestado.');
+            return;
+          }
+          finalRole = 'PRESTADOR';
+        } else if (selectedRole === 'LOJISTA' || selectedRole === 'PRESTADOR') {
+          // Se tentou se cadastrar como lojista mas o email não está na lista
+          showError(`Este e-mail não está pré-autorizado como ${selectedRole}. Entre em contato com o suporte.`);
           return;
         }
-        finalRole = 'LOJISTA';
-      } else if (serviceMatch) {
-        if (serviceMatch.provider_id) {
-          showError('Este e-mail já está vinculado a um perfil de serviço prestado.');
-          return;
-        }
-        finalRole = 'PRESTADOR';
-      } else if (selectedRole === 'LOJISTA' || selectedRole === 'PRESTADOR') {
-        // Se tentou se cadastrar como lojista mas o email não está na lista
-        showError(`Este e-mail não está pré-autorizado como ${selectedRole}. Entre em contato com o suporte.`);
-        return;
-      }
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: name, role: finalRole },
-          emailRedirectTo: window.location.origin.includes('localhost')
-            ? window.location.origin
-            : window.location.origin // No Vercel, o origin já será o domínio correto
-        }
-      });
-
-      if (error) {
-        showError(`Erro no cadastro: ${error.message}`);
-        return;
-      }
-
-      if (data.user) {
-        const userId = data.user.id;
-        const newUser: User = {
-          id: userId,
-          name,
+        const { data, error } = await supabase.auth.signUp({
           email,
-          role: isAuthorizedDev ? 'DEV' : finalRole,
-          phone: '',
-          document: '',
-          address: ''
-        };
-
-        if (finalRole === 'LOJISTA') {
-          const { data: updatedStore } = await supabase
-            .from('stores')
-            .update({ owner_id: userId })
-            .eq('email', email)
-            .select()
-            .single();
-
-          if (updatedStore) {
-            newUser.storeId = updatedStore.id;
-            setStores(prev => prev.map(s => s.id === updatedStore.id ? { ...s, ownerId: userId } : s));
+          password,
+          options: {
+            data: { full_name: name, role: finalRole },
+            emailRedirectTo: window.location.origin.includes('localhost')
+              ? window.location.origin
+              : window.location.origin // No Vercel, o origin já será o domínio correto
           }
-        } else if (finalRole === 'PRESTADOR') {
-          const { data: updatedService } = await supabase
-            .from('services')
-            .update({ provider_id: userId })
-            .eq('email', email)
-            .select()
-            .single();
+        });
 
-          if (updatedService) {
-            newUser.serviceId = updatedService.id;
-            setServices(prev => prev.map(s => s.id === updatedService.id ? { ...s, providerId: userId } : s));
-          }
+        if (error) {
+          showError(`Erro no cadastro: ${error.message}`);
+          return;
         }
 
-        // Remover propriedades que não existem na tabela 'profiles' do banco antes de inserir
-        const { storeId, serviceId, ...dbProfile } = newUser as any;
-        await supabase.from('profiles').insert([dbProfile]);
-        setCurrentUser(newUser);
-      }
-    }
+        if (data.user) {
+          const userId = data.user.id;
+          const newUser: User = {
+            id: userId,
+            name,
+            email,
+            role: isAuthorizedDev ? 'DEV' : finalRole,
+            phone: '',
+            document: '',
+            address: ''
+          };
 
-    setShowAuth(false);
-    showSuccess(authMode === 'REGISTER' ? 'Conta criada! Verifique seu e-mail.' : 'Login realizado!');
+          if (finalRole === 'LOJISTA') {
+            const { data: updatedStore } = await supabase
+              .from('stores')
+              .update({ owner_id: userId })
+              .eq('email', email)
+              .select()
+              .single();
+
+            if (updatedStore) {
+              newUser.storeId = updatedStore.id;
+              setStores(prev => prev.map(s => s.id === updatedStore.id ? { ...s, ownerId: userId } : s));
+            }
+          } else if (finalRole === 'PRESTADOR') {
+            const { data: updatedService } = await supabase
+              .from('services')
+              .update({ provider_id: userId })
+              .eq('email', email)
+              .select()
+              .single();
+
+            if (updatedService) {
+              newUser.serviceId = updatedService.id;
+              setServices(prev => prev.map(s => s.id === updatedService.id ? { ...s, providerId: userId } : s));
+            }
+          }
+
+          // Remover propriedades que não existem na tabela 'profiles' do banco antes de inserir
+          const { storeId, serviceId, ...dbProfile } = newUser as any;
+          await supabase.from('profiles').insert([dbProfile]);
+          setCurrentUser(newUser);
+        }
+      }
+
+      setShowAuth(false);
+      showSuccess(authMode === 'REGISTER' ? 'Conta criada! Verifique seu e-mail.' : 'Login concluído!');
+    } catch (err: any) {
+      console.error("Login fatal error:", err);
+      showError(`Erro inesperado: ${err.message || 'Falha técnica'}`);
+    }
   };
 
   const logout = () => {
