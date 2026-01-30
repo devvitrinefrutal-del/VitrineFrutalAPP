@@ -73,7 +73,8 @@ export interface Order {
   customerAddress?: string;
   deliveryMethod: 'ENTREGA' | 'RETIRADA';
   deliveryFee?: number;
-  status: 'PENDENTE' | 'PREPARANDO' | 'ENTREGUE' | 'CANCELADO';
+  status: 'PENDENTE' | 'PREPARANDO' | 'EM_ROTA' | 'ENTREGUE' | 'CANCELADO';
+  dispatchedAt?: string; // Timestamp quando saiu para entrega
   total: number;
   items: {
     productId: string;
@@ -81,5 +82,15 @@ export interface Order {
     quantity: number;
     price: number;
   }[];
+  createdAt: string;
+}
+
+export interface StoreRating {
+  id: string;
+  storeId: string;
+  orderId: string;
+  clientId: string;
+  rating: number; // 1-5
+  comment?: string;
   createdAt: string;
 }

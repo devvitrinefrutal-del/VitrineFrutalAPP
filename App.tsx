@@ -56,7 +56,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import { User, UserRole, Store as StoreType, Product, Service, CulturalItem, Order } from './types';
+import { User, UserRole, Store as StoreType, Product, Service, CulturalItem, Order, StoreRating } from './types';
 import { supabase } from './supabaseClient';
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
@@ -110,6 +110,10 @@ export default function App() {
   const [services, setServices] = useState<Service[]>(INITIAL_SERVICES);
   const [culturalItems, setCulturalItems] = useState<CulturalItem[]>(INITIAL_CULTURAL);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [storeRatings, setStoreRatings] = useState<StoreRating[]>([]);
+
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedOrderForRating, setSelectedOrderForRating] = useState<Order | null>(null);
 
   const [checkoutName, setCheckoutName] = useState('');
   const [checkoutDocument, setCheckoutDocument] = useState('');
@@ -196,7 +200,23 @@ export default function App() {
           customerAddress: o.customer_address,
           deliveryMethod: o.delivery_method,
           deliveryFee: o.delivery_fee,
+          dispatchedAt: o.dispatched_at,
           createdAt: o.created_at
+        })));
+      }
+
+      // Fetch Store Ratings
+      const { data: ratingsData, error: ratingsError } = await supabase
+        .from('store_ratings')
+        .select('*');
+
+      if (ratingsData) {
+        setStoreRatings(ratingsData.map((r: any) => ({
+          ...r,
+          storeId: r.store_id,
+          orderId: r.order_id,
+          clientId: r.client_id,
+          createdAt: r.created_at
         })));
       }
     };
@@ -396,6 +416,38 @@ export default function App() {
     };
 
     finalize();
+  };
+
+  const handleSaveRating = async (rating: number, comment: string) => {
+    if (!selectedOrderForRating || !currentUser) return;
+
+    const newRating = {
+      store_id: selectedOrderForRating.storeId,
+      order_id: selectedOrderForRating.id,
+      client_id: currentUser.id,
+      rating: rating,
+      comment: comment
+    };
+
+    const { data, error } = await supabase.from('store_ratings').insert([newRating]).select();
+
+    if (error) {
+      showError('Erro ao salvar avaliação: ' + error.message);
+      return;
+    }
+
+    if (data) {
+      setStoreRatings(prev => [...prev, {
+        ...data[0],
+        storeId: data[0].store_id,
+        orderId: data[0].order_id,
+        clientId: data[0].client_id,
+        createdAt: data[0].created_at
+      }]);
+      showSuccess('Agradecemos sua avaliação!');
+      setShowRatingModal(false);
+      setSelectedOrderForRating(null);
+    }
   };
 
   const closeOrderSuccess = () => {
@@ -663,11 +715,20 @@ export default function App() {
           <VitrineView
             stores={stores}
             products={products}
+            allRatings={storeRatings}
             onSelectStore={setSelectedStore}
             onAddToCart={handleAddToCart}
           />
         )}
-        {selectedStore && <StoreDetailView store={selectedStore} products={products.filter(p => p.storeId === selectedStore.id)} onBack={() => setSelectedStore(null)} onAddToCart={handleAddToCart} />}
+        {selectedStore && (
+          <StoreDetailView
+            store={selectedStore}
+            products={products.filter(p => p.storeId === selectedStore.id)}
+            allRatings={storeRatings}
+            onBack={() => setSelectedStore(null)}
+            onAddToCart={handleAddToCart}
+          />
+        )}
         {!selectedService && activeTab === 'SERVICOS' && <ServicosView services={services} onSelectService={setSelectedService} />}
         {selectedService && <ServiceDetailView service={selectedService} onBack={() => setSelectedService(null)} onRequestQuote={(s) => {
           const msg = `Olá ${s.name}, vi seu perfil no Vitrine Frutal e gostaria de solicitar um orçamento para o serviço de ${s.type}.`;
@@ -688,6 +749,9 @@ export default function App() {
             showSuccess={showSuccess}
             showError={showError}
             logout={logout}
+            storeRatings={storeRatings}
+            setSelectedOrderForRating={setSelectedOrderForRating}
+            setShowRatingModal={setShowRatingModal}
           />
         )}
 
@@ -933,11 +997,12 @@ function HeaderNavButton({ active, onClick, icon, label }: HeaderNavButtonProps)
 interface VitrineViewProps {
   stores: StoreType[];
   products: Product[]; // Now receives products for search
+  allRatings: StoreRating[];
   onSelectStore: (store: StoreType) => void;
   onAddToCart: (product: Product) => void;
 }
 
-function VitrineView({ stores, products, onSelectStore, onAddToCart }: VitrineViewProps) {
+function VitrineView({ stores, products, allRatings, onSelectStore, onAddToCart }: VitrineViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState<{ min: string, max: string }>({ min: '', max: '' });
@@ -1061,19 +1126,30 @@ function VitrineView({ stores, products, onSelectStore, onAddToCart }: VitrineVi
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
-            {stores.map((store: StoreType) => (
-              <div key={store.id} onClick={() => onSelectStore(store)} className="group cursor-pointer bg-white rounded-[3rem] overflow-hidden shadow-sm border border-gray-100 flex flex-col sm:flex-row h-full active:scale-[0.98] transition-all hover:shadow-2xl">
-                <div className="w-full sm:w-1/2 aspect-video sm:aspect-square overflow-hidden relative">
-                  <img src={store.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+            {stores.map((store: StoreType) => {
+              const storeRatings = allRatings.filter(r => r.storeId === store.id);
+              const avgRating = storeRatings.length > 0 ? storeRatings.reduce((s, r) => s + r.rating, 0) / storeRatings.length : 0;
 
+              return (
+                <div key={store.id} onClick={() => onSelectStore(store)} className="group cursor-pointer bg-white rounded-[3rem] overflow-hidden shadow-sm border border-gray-100 flex flex-col sm:flex-row h-full active:scale-[0.98] transition-all hover:shadow-2xl">
+                  <div className="w-full sm:w-1/2 aspect-video sm:aspect-square overflow-hidden relative">
+                    <img src={store.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    {avgRating > 0 && (
+                      <div className="absolute top-4 left-4 px-4 py-2 bg-white/90 backdrop-blur rounded-2xl shadow-xl flex items-center gap-2 border border-white">
+                        <Star size={14} className="text-orange-500" fill="currentColor" />
+                        <span className="text-[11px] font-black text-black">{avgRating.toFixed(1)}</span>
+                        <span className="text-[9px] text-gray-400 font-bold">({storeRatings.length})</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-10 flex flex-col justify-center flex-1">
+                    <h3 className="font-black text-3xl text-black group-hover:text-green-600 transition-colors uppercase tracking-tighter leading-none mb-2">{store.name}</h3>
+                    <p className="text-gray-400 text-[10px] mb-6 font-black uppercase tracking-[0.2em]">{store.category}</p>
+                    <div className="mt-auto font-black text-green-600 text-[10px] flex items-center gap-2 group-hover:gap-4 transition-all uppercase tracking-[0.2em]">Ver Coleção Completa <ChevronRight size={18} /></div>
+                  </div>
                 </div>
-                <div className="p-10 flex flex-col justify-center flex-1">
-                  <h3 className="font-black text-3xl text-black group-hover:text-green-600 transition-colors uppercase tracking-tighter leading-none mb-2">{store.name}</h3>
-                  <p className="text-gray-400 text-[10px] mb-6 font-black uppercase tracking-[0.2em]">{store.category}</p>
-                  <div className="mt-auto font-black text-green-600 text-[10px] flex items-center gap-2 group-hover:gap-4 transition-all uppercase tracking-[0.2em]">Ver Coleção Completa <ChevronRight size={18} /></div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -1084,11 +1160,14 @@ function VitrineView({ stores, products, onSelectStore, onAddToCart }: VitrineVi
 interface StoreDetailViewProps {
   store: StoreType;
   products: Product[];
+  allRatings: StoreRating[];
   onBack: () => void;
   onAddToCart: (product: Product) => void;
 }
 
-function StoreDetailView({ store, products, onBack, onAddToCart }: StoreDetailViewProps) {
+function StoreDetailView({ store, products, allRatings, onBack, onAddToCart }: StoreDetailViewProps) {
+  const storeRatings = allRatings.filter(r => r.storeId === store.id);
+  const avgRating = storeRatings.length > 0 ? storeRatings.reduce((s, r) => s + r.rating, 0) / storeRatings.length : 0;
   return (
     <div className="space-y-10 animate-in fade-in">
       <button onClick={onBack} className="text-green-600 font-black flex items-center gap-2 group uppercase tracking-widest text-[10px]"><ArrowLeft className="group-hover:-translate-x-1 transition-transform" size={20} /> Explorar Outras Lojas</button>
@@ -1096,8 +1175,13 @@ function StoreDetailView({ store, products, onBack, onAddToCart }: StoreDetailVi
         <img src={store.image} className="w-24 h-24 rounded-[2rem] object-cover shadow-lg" />
         <div>
           <h2 className="text-4xl font-black text-black tracking-tighter uppercase">{store.name}</h2>
-          <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest">
-            <StoreIcon size={16} className="text-orange-500" /> {store.category}
+          <div className="flex items-center gap-4 mt-1">
+            <div className="flex items-center gap-1.5 text-orange-500 font-black text-[10px] uppercase tracking-widest bg-orange-50 px-3 py-1 rounded-full">
+              <Star size={12} fill="currentColor" /> {avgRating > 0 ? avgRating.toFixed(1) : 'Sem avaliações'}
+            </div>
+            <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest">
+              <StoreIcon size={16} className="text-orange-500" /> {store.category}
+            </div>
           </div>
         </div>
       </div>
@@ -1418,15 +1502,19 @@ interface DashboardViewProps {
   showSuccess: (msg: string) => void;
   showError: (msg: string) => void;
   logout: () => void;
+  storeRatings: StoreRating[];
+  setSelectedOrderForRating: (order: Order | null) => void;
+  setShowRatingModal: (show: boolean) => void;
 }
 
-function DashboardView({ user, setCurrentUser, stores, setStores, products, setProducts, orders, setOrders, services, setServices, culturalItems, setCulturalItems, showSuccess, showError, logout }: DashboardViewProps) {
+function DashboardView({ user, setCurrentUser, stores, setStores, products, setProducts, orders, setOrders, services, setServices, culturalItems, setCulturalItems, showSuccess, showError, logout, storeRatings, setSelectedOrderForRating, setShowRatingModal }: DashboardViewProps) {
   // Fix for potential null user crash during state init
-  const [activeTab, setActiveTab] = useState<'ORDERS' | 'HISTORY' | 'PRODUCTS' | 'STOCK' | 'MY_SERVICE' | 'MANAGE_STORES' | 'MANAGE_SERVICES' | 'MANAGE_CULTURAL' | 'PANEL'>(() => {
+  const [activeTab, setActiveTab] = useState<'ORDERS' | 'HISTORY' | 'MY_ORDERS' | 'PRODUCTS' | 'STOCK' | 'MY_SERVICE' | 'MANAGE_STORES' | 'MANAGE_SERVICES' | 'MANAGE_CULTURAL' | 'PANEL'>(() => {
     if (!user) return 'PANEL';
     if (user.role === 'DEV') return 'MANAGE_STORES';
     if (user.role === 'LOJISTA') return 'ORDERS';
     if (user.role === 'PRESTADOR') return 'MY_SERVICE';
+    if (user.role === 'CLIENTE') return 'MY_ORDERS';
     return 'PANEL';
   });
 
@@ -1472,9 +1560,16 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
 
     try {
       // UPDATE LOCAL STATE
-      setOrders((prev: Order[]) => prev.map((o: Order) =>
-        o.id === orderId ? { ...o, status: newStatus, deliveryFee: currentManagerDeliveryFee } : o
-      ));
+      setOrders((prev: Order[]) => prev.map((o: Order) => {
+        if (o.id === orderId) {
+          const updated: Order = { ...o, status: newStatus, deliveryFee: currentManagerDeliveryFee };
+          if (newStatus === 'EM_ROTA') {
+            updated.dispatchedAt = new Date().toISOString();
+          }
+          return updated;
+        }
+        return o;
+      }));
 
       // RESTORE STOCK IF TRANSITIONING TO CANCELLED
       if (newStatus === 'CANCELADO' && orderToUpdate.status !== 'CANCELADO') {
@@ -1489,10 +1584,16 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
       }
 
       // PERSIST ORDER STATUS TO SUPABASE
-      const { error } = await supabase.from('orders').update({
+      const updateData: any = {
         status: newStatus,
         delivery_fee: currentManagerDeliveryFee
-      }).eq('id', orderId);
+      };
+
+      if (newStatus === 'EM_ROTA') {
+        updateData.dispatched_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase.from('orders').update(updateData).eq('id', orderId);
 
       if (error) {
         showError('Erro ao salvar status: ' + error.message);
@@ -1856,6 +1957,9 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
               <TabBtn active={activeTab === 'STOCK'} icon={<Package size={16} />} label="Inventário" onClick={() => setActiveTab('STOCK')} />
             </>
           )}
+          {user?.role === 'CLIENTE' && (
+            <TabBtn active={activeTab === 'MY_ORDERS'} icon={<ShoppingBag size={16} />} label="Meus Pedidos" onClick={() => setActiveTab('MY_ORDERS')} />
+          )}
           {user?.role === 'PRESTADOR' && (
             <TabBtn active={activeTab === 'MY_SERVICE'} icon={<Hammer size={16} />} label="Cadastro de Serviço" onClick={() => setActiveTab('MY_SERVICE')} />
           )}
@@ -2071,6 +2175,104 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
           </div>
         )}
 
+        {activeTab === 'MY_ORDERS' && user?.role === 'CLIENTE' && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm">
+              <h3 className="text-xl font-black text-black tracking-tight uppercase tracking-widest text-xs mb-1">Meus Pedidos em Frutal</h3>
+              <p className="text-[9px] text-green-500 font-bold uppercase tracking-widest">Acompanhe suas compras em tempo real</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {orders.filter(o => o.clientId === user.id).length === 0 ? (
+                <div className="md:col-span-2 py-20 text-center bg-white rounded-[3rem] border border-dashed border-gray-200">
+                  <ShoppingBag size={48} className="mx-auto text-gray-200 mb-4" />
+                  <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Você ainda não fez nenhum pedido</p>
+                </div>
+              ) : (
+                orders.filter(o => o.clientId === user.id).map(o => {
+                  const store = stores.find(s => s.id === o.storeId);
+                  const step = o.status === 'PENDENTE' ? 1 : o.status === 'PREPARANDO' ? 2 : o.status === 'EM_ROTA' ? 3 : 4;
+
+                  return (
+                    <div key={o.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
+                      <div className="flex justify-between items-start mb-6">
+                        <div>
+                          <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1">{store?.name || 'Loja'}</p>
+                          <h4 className="font-black text-black text-lg tracking-tighter uppercase">Pedido #{o.id.slice(0, 5)}</h4>
+                        </div>
+                        <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${o.status === 'ENTREGUE' ? 'bg-green-50 text-green-600' : o.status === 'CANCELADO' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+                          {o.status}
+                        </div>
+                      </div>
+
+                      {/* Status Timeline */}
+                      {o.status !== 'CANCELADO' && (
+                        <div className="relative flex justify-between mb-8 px-2">
+                          <div className="absolute top-[18px] left-0 w-full h-0.5 bg-gray-100 z-0"></div>
+                          <div className={`absolute top-[18px] left-0 h-0.5 bg-green-500 z-0 transition-all`} style={{ width: `${((step - 1) / 3) * 100}%` }}></div>
+
+                          {[
+                            { icon: <ClipboardList size={14} />, label: 'Pedido' },
+                            { icon: <PlayCircle size={14} />, label: 'Preparo' },
+                            { icon: <Truck size={14} />, label: 'Rota' },
+                            { icon: <CheckCircle size={14} />, label: 'Entrega' }
+                          ].map((s, idx) => (
+                            <div key={idx} className="relative z-10 flex flex-col items-center">
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center border-4 border-white shadow-sm transition-all ${idx < step ? 'bg-green-500 text-white' : idx === step - 1 ? 'bg-blue-500 text-white animate-pulse' : 'bg-gray-100 text-gray-400'}`}>
+                                {s.icon}
+                              </div>
+                              <span className={`text-[8px] mt-2 font-black uppercase tracking-widest ${idx < step ? 'text-green-600' : 'text-gray-400'}`}>{s.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="space-y-2 mb-6 bg-gray-50 p-4 rounded-2xl">
+                        {o.items.map((item, idx) => (
+                          <div key={idx} className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">
+                            <span>{item.quantity}x {item.name}</span>
+                            <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
+                          </div>
+                        ))}
+                        <div className="pt-2 border-t border-gray-200 flex justify-between text-[10px] font-black text-black uppercase tracking-widest">
+                          <span>Total Pago</span>
+                          <span>R$ {(o.total + (o.deliveryFee || 0)).toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      {o.status === 'EM_ROTA' && (
+                        <button
+                          onClick={() => handleUpdateOrderStatus(o.id, 'ENTREGUE')}
+                          className="w-full py-4 bg-green-600 text-white font-black rounded-2xl shadow-xl hover:bg-green-700 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
+                        >
+                          <CheckCircle size={18} /> Confirmar Recebimento
+                        </button>
+                      )}
+
+                      {o.status === 'ENTREGUE' && (
+                        <button
+                          onClick={() => {
+                            const alreadyRated = storeRatings.some(r => r.orderId === o.id);
+                            if (alreadyRated) {
+                              showError('Você já avaliou este pedido!');
+                            } else {
+                              setSelectedOrderForRating(o);
+                              setShowRatingModal(true);
+                            }
+                          }}
+                          className="w-full py-4 bg-orange-500 text-white font-black rounded-2xl shadow-xl hover:bg-orange-600 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
+                        >
+                          <Star size={18} /> Avaliar Loja
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'PANEL' && (
           <div className="max-w-2xl mx-auto bg-white p-16 rounded-[4rem] border border-gray-100 shadow-sm animate-in zoom-in duration-500">
             {!isEditingProfile ? (
@@ -2273,12 +2475,32 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
               {selectedOrder.status === 'PREPARANDO' && (
                 <button
                   disabled={isUpdatingOrder}
-                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'ENTREGUE')}
-                  className="w-full py-5 bg-green-600 text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:bg-green-700 transition-all uppercase tracking-widest text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'EM_ROTA')}
+                  className="w-full py-5 bg-orange-600 text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:bg-orange-700 transition-all uppercase tracking-widest text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <CheckCircle size={20} /> {isUpdatingOrder ? 'Processando...' : 'Marcar como Entregue'}
+                  <Truck size={20} /> {isUpdatingOrder ? 'Processando...' : 'Saiu para Entrega'}
                 </button>
               )}
+              {selectedOrder.status === 'EM_ROTA' && (() => {
+                const dispatchTime = selectedOrder.dispatchedAt ? new Date(selectedOrder.dispatchedAt).getTime() : 0;
+                const now = Date.now();
+                const oneHour = 3600000;
+                const isWaitOver = now - dispatchTime > oneHour;
+                const minutesLeft = Math.ceil((oneHour - (now - dispatchTime)) / 60000);
+
+                return (
+                  <button
+                    disabled={isUpdatingOrder || !isWaitOver}
+                    onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'ENTREGUE')}
+                    className={`w-full py-5 ${isWaitOver ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'} text-white font-black rounded-2xl shadow-xl flex flex-col items-center justify-center transition-all uppercase tracking-widest text-[10px] disabled:opacity-80`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <CheckCircle size={20} /> {isUpdatingOrder ? 'Processando...' : 'Confirmar Entrega'}
+                    </div>
+                    {!isWaitOver && <span className="text-[8px] opacity-70 mt-1">Liberado em {minutesLeft} min</span>}
+                  </button>
+                );
+              })()}
               <button
                 disabled={isUpdatingOrder}
                 onClick={() => {

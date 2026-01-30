@@ -77,11 +77,23 @@ CREATE TABLE orders (
   customer_name TEXT,
   customer_phone TEXT,
   customer_address TEXT,
-  delivery_method TEXT,
-  delivery_fee DECIMAL,
-  total DECIMAL,
-  status TEXT DEFAULT 'PENDENTE',
+  delivery_method TEXT CHECK (delivery_method IN ('ENTREGA', 'RETIRADA')),
+  delivery_fee DECIMAL DEFAULT 0,
+  status TEXT CHECK (status IN ('PENDENTE', 'PREPARANDO', 'EM_ROTA', 'ENTREGUE', 'CANCELADO')) DEFAULT 'PENDENTE',
+  dispatched_at TIMESTAMP WITH TIME ZONE, -- Timestamp quando saiu para entrega
+  total DECIMAL NOT NULL,
   items JSONB, -- Array de itens comprados
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 7. Tabela de Avaliações de Lojas
+CREATE TABLE store_ratings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  store_id UUID REFERENCES stores(id) ON DELETE CASCADE NOT NULL,
+  order_id UUID REFERENCES orders(id) ON DELETE CASCADE NOT NULL UNIQUE, -- Uma avaliação por pedido
+  client_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  rating INTEGER CHECK (rating >= 1 AND rating <= 5) NOT NULL,
+  comment TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
