@@ -138,33 +138,48 @@ export default function App() {
       }, 10000);
 
       try {
+        console.log('--- Início da busca de dados (fetchData) ---');
         // Verificar se as chaves do Supabase estão configuradas
-        const isPlaceholder = !import.meta.env.VITE_SUPABASE_URL ||
-          import.meta.env.VITE_SUPABASE_URL.includes('placeholder');
+        const rawUrl = import.meta.env.VITE_SUPABASE_URL;
+        const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        console.log('Verificando variáveis de ambiente:', {
+          urlDefined: !!rawUrl,
+          keyDefined: !!rawKey,
+          isPlaceholder: rawUrl?.includes('placeholder')
+        });
+
+        const isPlaceholder = !rawUrl || rawUrl.includes('placeholder');
 
         if (isPlaceholder) {
+          console.error('ERRO: Segredos não encontrados!');
           showError("ERRO: Segredos do banco não encontrados na Vercel (VITE_...).");
-          console.error("Variáveis de ambiente do Supabase não configuradas!");
           setConnectionError(true);
           clearTimeout(timeoutId);
           setIsLoading(false);
           return;
         }
 
-        // Parallel fetch for core data
+        console.log('Iniciando Promise.all para buscar lojas, produtos, etc...');
+
+        const fetchPromises = [
+          supabase.from('stores').select('*'),
+          supabase.from('products').select('*'),
+          supabase.from('services').select('*'),
+          supabase.from('cultural_items').select('*'),
+          supabase.from('orders').select('*').order('created_at', { ascending: false })
+        ];
+
+        const results = await Promise.all(fetchPromises);
+        console.log('Busca finalizada. Resultados:', results.map(r => r.error ? 'ERRO' : 'OK (' + (r.data?.length || 0) + ' itens)'));
+
         const [
           { data: storesData, error: storesError },
           { data: productsData, error: productsError },
           { data: servicesData, error: servicesError },
           { data: culturalData, error: culturalError },
           { data: ordersData, error: ordersError }
-        ] = await Promise.all([
-          supabase.from('stores').select('*'),
-          supabase.from('products').select('*'),
-          supabase.from('services').select('*'),
-          supabase.from('cultural_items').select('*'),
-          supabase.from('orders').select('*').order('created_at', { ascending: false })
-        ]);
+        ] = results;
 
         if (storesError) console.error('Erro lojas:', storesError);
         if (productsError) console.error('Erro produtos:', productsError);
@@ -176,6 +191,8 @@ export default function App() {
         } else {
           setConnectionError(false);
         }
+
+        console.log('Mapeando e salvando estados locais...');
 
         if (storesData) {
           setStores(storesData.map((s: any) => ({
