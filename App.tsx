@@ -123,102 +123,112 @@ export default function App() {
   const [checkoutAddress, setCheckoutAddress] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState<'ENTREGA' | 'RETIRADA'>('ENTREGA');
   const [connectionError, setConnectionError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const user = currentUser;
 
   // Supabase Fetching
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch Stores
-      const { data: storesData, error: storesError } = await supabase
-        .from('stores')
-        .select('*');
-      if (storesError) console.error('Erro ao buscar lojas:', storesError);
-      else if (storesData && storesData.length > 0) {
-        setStores(storesData.map((s: any) => ({
-          ...s,
-          ownerId: s.owner_id,
-          deliveryFee: s.delivery_fee
-        })));
-      }
+      setIsLoading(true);
+      console.log("Iniciando busca de dados Supabase...");
 
-      // Fetch Products
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('*');
-      if (productsError) console.error('Erro ao buscar produtos:', productsError);
-      else if (productsData && productsData.length > 0) {
-        setProducts(productsData.map((p: any) => ({
-          ...p,
-          storeId: p.store_id
-        })));
-      }
+      try {
+        // Parallel fetch for core data
+        const [
+          { data: storesData, error: storesError },
+          { data: productsData, error: productsError },
+          { data: servicesData, error: servicesError },
+          { data: culturalData, error: culturalError },
+          { data: ordersData, error: ordersError }
+        ] = await Promise.all([
+          supabase.from('stores').select('*'),
+          supabase.from('products').select('*'),
+          supabase.from('services').select('*'),
+          supabase.from('cultural_items').select('*'),
+          supabase.from('orders').select('*').order('created_at', { ascending: false })
+        ]);
 
-      // Fetch Services
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('*');
-      if (servicesError) console.error('Erro ao buscar serviços:', servicesError);
-      else if (servicesData && servicesData.length > 0) {
-        setServices(servicesData.map((s: any) => ({
-          ...s,
-          providerId: s.provider_id
-        })));
-      }
+        if (storesError) console.error('Erro lojas:', storesError);
+        if (productsError) console.error('Erro produtos:', productsError);
+        if (servicesError) console.error('Erro serviços:', servicesError);
+        if (culturalError) console.error('Erro cultural:', culturalError);
+        if (ordersError) console.warn('Erro pedidos (esperado se não logado):', ordersError);
 
-      // Fetch Cultural Items
-      const { data: culturalData, error: culturalError } = await supabase
-        .from('cultural_items')
-        .select('*');
-      if (culturalError) console.error('Erro ao buscar itens culturais:', culturalError);
-      else if (culturalData && culturalData.length > 0) setCulturalItems(culturalData);
+        // Somente erro na busca de lojas é considerado erro de conexão crítico
+        if (storesError) {
+          setConnectionError(true);
+        } else {
+          setConnectionError(false);
+        }
 
-      // Fetch Orders
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
+        if (storesData) {
+          console.log(`Lojas carregadas: ${storesData.length}`);
+          setStores(storesData.map((s: any) => ({
+            ...s,
+            ownerId: s.owner_id,
+            deliveryFee: s.delivery_fee
+          })));
+        }
 
-      if (storesError || productsError || servicesError || culturalError || ordersError) {
-        console.error('Erro de conexão:', { storesError, productsError, servicesError, culturalError, ordersError });
+        if (productsData) {
+          console.log(`Produtos carregados: ${productsData.length}`);
+          setProducts(productsData.map((p: any) => ({
+            ...p,
+            storeId: p.store_id
+          })));
+        }
+
+        if (servicesData) {
+          console.log(`Serviços carregados: ${servicesData.length}`);
+          setServices(servicesData.map((s: any) => ({
+            ...s,
+            providerId: s.provider_id,
+            priceEstimate: s.price_estimate
+          })));
+        }
+
+        if (culturalData) {
+          console.log(`Itens culturais carregados: ${culturalData.length}`);
+          setCulturalItems(culturalData);
+        }
+
+        if (ordersData) {
+          setOrders(ordersData.map((o: any) => ({
+            ...o,
+            storeId: o.store_id,
+            clientId: o.client_id,
+            customerName: o.customer_name,
+            customerPhone: o.customer_phone,
+            customerAddress: o.customer_address,
+            deliveryMethod: o.delivery_method,
+            deliveryFee: o.delivery_fee,
+            dispatchedAt: o.dispatched_at,
+            createdAt: o.created_at
+          })));
+        }
+
+        // Fetch Store Ratings (Opcional, não deve travar)
+        try {
+          const { data: ratingsData } = await supabase.from('store_ratings').select('*');
+          if (ratingsData) {
+            setStoreRatings(ratingsData.map((r: any) => ({
+              ...r,
+              storeId: r.store_id,
+              orderId: r.order_id,
+              clientId: r.client_id,
+              createdAt: r.created_at
+            })));
+          }
+        } catch (e) {
+          console.error('Erro avaliações:', e);
+        }
+
+      } catch (err) {
+        console.error('Erro global na busca:', err);
         setConnectionError(true);
-      } else {
-        setConnectionError(false);
-      }
-
-      if (storesData) setStores(storesData.map((s: any) => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
-      if (productsData) setProducts(productsData.map((p: any) => ({ ...p, storeId: p.store_id })));
-      if (servicesData) setServices(servicesData.map((s: any) => ({ ...s, providerId: s.provider_id })));
-      if (culturalData) setCulturalItems(culturalData);
-
-      if (ordersData) {
-        setOrders(ordersData.map((o: any) => ({
-          ...o,
-          storeId: o.store_id,
-          clientId: o.client_id,
-          customerName: o.customer_name,
-          customerPhone: o.customer_phone,
-          customerAddress: o.customer_address,
-          deliveryMethod: o.delivery_method,
-          deliveryFee: o.delivery_fee,
-          dispatchedAt: o.dispatched_at,
-          createdAt: o.created_at
-        })));
-      }
-
-      // Fetch Store Ratings
-      const { data: ratingsData, error: ratingsError } = await supabase
-        .from('store_ratings')
-        .select('*');
-
-      if (ratingsData) {
-        setStoreRatings(ratingsData.map((r: any) => ({
-          ...r,
-          storeId: r.store_id,
-          orderId: r.order_id,
-          clientId: r.client_id,
-          createdAt: r.created_at
-        })));
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -256,8 +266,10 @@ export default function App() {
       console.log("Auth event:", event, session?.user?.email);
 
       if (session?.user) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        console.log("Sessão ativa encontrada:", session.user.id);
+        const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
         if (profile) {
+          console.log("Perfil carregado via AuthChange:", profile.role);
           // Sync storeId/serviceId if applicable
           const { data: storeMatch } = await supabase.from('stores').select('id').eq('email', session.user.email).maybeSingle();
           const { data: serviceMatch } = await supabase.from('services').select('id').eq('email', session.user.email).maybeSingle();
@@ -505,11 +517,17 @@ export default function App() {
     if (authMode === 'LOGIN') {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        showError(`Erro no login: ${error.message}`);
+        if (error.message.includes('Invalid login credentials')) {
+          showError('E-mail ou senha incorretos. Verifique seus dados.');
+        } else {
+          showError(`Erro no login: ${error.message}`);
+        }
         return;
       }
 
-      let { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+      console.log("Tentativa de login para:", email);
+      let { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+      console.log("Resultado busca perfil:", profile ? "Encontrado" : "Não encontrado", profileError);
 
       if (isAuthorizedDev) {
         if (!profile) {
@@ -522,7 +540,8 @@ export default function App() {
             document: '',
             address: ''
           };
-          await supabase.from('profiles').insert([newDev]);
+          const { error: devInsertError } = await supabase.from('profiles').insert([newDev]);
+          if (devInsertError) console.error("Erro ao criar perfil DEV:", devInsertError);
           profile = newDev;
         } else if (profile.role !== 'DEV') {
           await supabase.from('profiles').update({ role: 'DEV' }).eq('id', data.user.id);
@@ -566,17 +585,24 @@ export default function App() {
 
         setCurrentUser(profile);
       } else {
+        // Se o login funcionou mas não tem perfil, cria um perfil básico de CLIENTE
         const newUser: User = {
           id: data.user.id,
-          name,
-          email,
-          role: (selectedRole === 'DEV' && !isAuthorizedDev) ? 'CLIENTE' : (selectedRole || 'CLIENTE'),
+          name: name || 'Usuário',
+          email: email,
+          role: 'CLIENTE',
           phone: '',
           document: '',
           address: ''
         };
-        await supabase.from('profiles').insert([newUser]);
-        setCurrentUser(newUser);
+        const { error: insertError } = await supabase.from('profiles').insert([newUser]);
+        if (insertError) {
+          showError(`Erro ao criar perfil: ${insertError.message}`);
+          await supabase.auth.signOut();
+        } else {
+          setCurrentUser(newUser);
+          showSuccess('Login realizado (novo perfil criado)');
+        }
       }
     } else if (authMode === 'REGISTER') {
       let finalRole: UserRole = selectedRole || 'CLIENTE';
@@ -687,288 +713,313 @@ export default function App() {
       <SpeedInsights />
       <Analytics />
 
-      {connectionError && (
-        <div className="fixed top-0 left-0 right-0 z-[200] bg-red-600 text-white px-4 py-3 text-center font-bold text-xs uppercase tracking-widest shadow-xl flex justify-center items-center gap-3">
-          <AlertCircle size={18} />
-          <span>Sem conexão com o servidor. Verifique sua internet.</span>
-          <button onClick={() => window.location.reload()} className="bg-white text-red-600 px-3 py-1 rounded-lg text-[10px] hover:bg-gray-100 transition-colors">Tentar Reconectar</button>
+      {isLoading ? (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-6 animate-in fade-in duration-500">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 animate-pulse">Sincronizando com Frutal...</p>
         </div>
-      )}
-
-      <header className="glass-effect sticky top-0 z-50 px-4 md:px-8 py-3 flex justify-between items-center border-b border-gray-100">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleTabChange('VITRINE')}>
-            <Logo />
-            <span className="font-bold text-xl tracking-tight text-gray-800 hidden sm:inline uppercase">
-              Vitrine<span className="text-orange-500">Frutal</span>
-            </span>
-          </div>
-          <nav className="hidden md:flex items-center gap-1">
-            <HeaderNavButton active={activeTab === 'VITRINE'} onClick={() => handleTabChange('VITRINE')} icon={<ShoppingBag size={18} />} label="Vitrine" />
-            <HeaderNavButton active={activeTab === 'SERVICOS'} onClick={() => handleTabChange('SERVICOS')} icon={<Briefcase size={18} />} label="Serviços" />
-            <HeaderNavButton active={activeTab === 'CULTURAL'} onClick={() => handleTabChange('CULTURAL')} icon={<Globe size={18} />} label="Giro Cultural" />
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleTabChange('CHECKOUT')}
-            className={`relative p-2.5 mr-1 sm:mr-2 bg-white border rounded-xl transition-all ${activeTab === 'CHECKOUT' ? 'border-orange-500 text-orange-500 shadow-lg shadow-orange-50' : 'border-gray-100 text-gray-600 hover:bg-gray-50'}`}
-          >
-            <ShoppingCart size={20} />
-            {cart.length > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">{cart.length}</span>}
-          </button>
-
-          {currentUser ? (
-            <div className="flex items-center gap-2 sm:gap-3">
-              <button onClick={() => handleTabChange('DASHBOARD')} className={`flex items-center gap-2 p-2 px-3 rounded-xl transition-colors ${activeTab === 'DASHBOARD' ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}>
-                <UserIcon size={20} />
-                <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">Painel</span>
-              </button>
-              <button onClick={logout} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"><LogOut size={20} /></button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 sm:gap-2">
-              <button
-                onClick={() => { setAuthMode('REGISTER'); setSelectedRole('CLIENTE'); setShowAuth(true); }}
-                className="px-3 sm:px-5 py-2.5 text-green-600 font-black hover:bg-green-50 rounded-xl transition-all text-[9px] sm:text-[10px] uppercase tracking-widest"
-              >
-                Cadastre-se
-              </button>
-              <button
-                onClick={() => { setAuthMode('SELECTION'); setShowAuth(true); }}
-                className="px-4 sm:px-5 py-2.5 bg-orange-500 text-white font-black rounded-xl hover:bg-orange-600 shadow-md text-[9px] sm:text-[10px] uppercase tracking-widest transition-all"
-              >
-                Entrar
-              </button>
+      ) : (
+        <>
+          {connectionError && (
+            <div className="fixed top-0 left-0 right-0 z-[200] bg-red-600 text-white px-4 py-3 text-center font-bold text-xs uppercase tracking-widest shadow-xl flex justify-center items-center gap-3">
+              <AlertCircle size={18} />
+              <span>Sem conexão com o servidor. Verifique sua internet.</span>
+              <button onClick={() => window.location.reload()} className="bg-white text-red-600 px-3 py-1 rounded-lg text-[10px] hover:bg-gray-100 transition-colors">Tentar Reconectar</button>
             </div>
           )}
-        </div>
-      </header>
 
-      <main className="max-w-6xl mx-auto px-4 md:px-8 py-8">
-        {!selectedStore && activeTab === 'VITRINE' && (
-          <VitrineView
-            stores={stores}
-            products={products}
-            allRatings={storeRatings}
-            onSelectStore={setSelectedStore}
-            onAddToCart={handleAddToCart}
-          />
-        )}
-        {selectedStore && (
-          <StoreDetailView
-            store={selectedStore}
-            products={products.filter(p => p.storeId === selectedStore.id)}
-            allRatings={storeRatings}
-            onBack={() => setSelectedStore(null)}
-            onAddToCart={handleAddToCart}
-          />
-        )}
-        {!selectedService && activeTab === 'SERVICOS' && <ServicosView services={services} onSelectService={setSelectedService} />}
-        {selectedService && <ServiceDetailView service={selectedService} onBack={() => setSelectedService(null)} onRequestQuote={(s) => {
-          const msg = `Olá ${s.name}, vi seu perfil no Vitrine Frutal e gostaria de solicitar um orçamento para o serviço de ${s.type}.`;
-          window.open(`https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
-        }} />}
-        {!selectedCulturalItem && activeTab === 'CULTURAL' && <GiroCulturalView items={culturalItems} onSelectItem={setSelectedCulturalItem} />}
-        {selectedCulturalItem && <CulturalDetailView item={selectedCulturalItem} onBack={() => setSelectedCulturalItem(null)} />}
-
-        {activeTab === 'DASHBOARD' && currentUser && (
-          <DashboardView
-            user={currentUser}
-            setCurrentUser={setCurrentUser}
-            stores={stores} setStores={setStores}
-            products={products} setProducts={setProducts}
-            orders={orders} setOrders={setOrders}
-            services={services} setServices={setServices}
-            culturalItems={culturalItems} setCulturalItems={setCulturalItems}
-            showSuccess={showSuccess}
-            showError={showError}
-            logout={logout}
-            storeRatings={storeRatings}
-            setSelectedOrderForRating={setSelectedOrderForRating}
-            setShowRatingModal={setShowRatingModal}
-          />
-        )}
-
-        {activeTab === 'DASHBOARD' && !currentUser && (
-          <div className="flex flex-col items-center justify-center py-20 text-center space-y-8 animate-in fade-in">
-            <div className="w-24 h-24 bg-gray-50 rounded-[2.5rem] flex items-center justify-center text-gray-300">
-              <UserIcon size={48} />
+          <header className="glass-effect sticky top-0 z-50 px-4 md:px-8 py-3 flex justify-between items-center border-b border-gray-100">
+            <div className="flex items-center gap-8">
+              <div className="flex items-center gap-2 cursor-pointer" onClick={() => handleTabChange('VITRINE')}>
+                <Logo />
+              </div>
+              <span className="font-bold text-xl tracking-tight text-gray-800 hidden sm:inline uppercase">
+                Vitrine<span className="text-orange-500">Frutal</span>
+              </span>
             </div>
-            <div className="max-w-xs px-4">
-              <h3 className="text-2xl font-black text-black uppercase tracking-tighter">Acesso Restrito</h3>
-              <p className="text-gray-500 mt-2 font-medium">Faça login ou cadastre-se para gerenciar seus pedidos, sua loja ou prestação de serviços.</p>
-            </div>
-            <div className="flex flex-col w-full max-w-xs gap-3 px-6">
+            <nav className="hidden md:flex items-center gap-1">
+              <HeaderNavButton active={activeTab === 'VITRINE'} onClick={() => handleTabChange('VITRINE')} icon={<ShoppingBag size={18} />} label="Vitrine" />
+              <HeaderNavButton active={activeTab === 'SERVICOS'} onClick={() => handleTabChange('SERVICOS')} icon={<Briefcase size={18} />} label="Serviços" />
+              <HeaderNavButton active={activeTab === 'CULTURAL'} onClick={() => handleTabChange('CULTURAL')} icon={<Globe size={18} />} label="Giro Cultural" />
+            </nav>
+
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => { setAuthMode('SELECTION'); setShowAuth(true); }}
-                className="w-full py-4 bg-orange-500 text-white font-black rounded-2xl shadow-xl hover:bg-orange-600 transition-all uppercase tracking-widest text-[10px]"
+                onClick={() => handleTabChange('CHECKOUT')}
+                className={`relative p-2.5 mr-1 sm:mr-2 bg-white border rounded-xl transition-all ${activeTab === 'CHECKOUT' ? 'border-orange-500 text-orange-500 shadow-lg shadow-orange-50' : 'border-gray-100 text-gray-600 hover:bg-gray-50'}`}
               >
-                Entrar agora
+                <ShoppingCart size={20} />
+                {cart.length > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">{cart.length}</span>}
               </button>
-              <button
-                onClick={() => { setAuthMode('REGISTER'); setSelectedRole('CLIENTE'); setShowAuth(true); }}
-                className="w-full py-4 bg-white text-green-600 border-2 border-green-100 hover:border-green-200 font-black rounded-2xl transition-all uppercase tracking-widest text-[10px]"
-              >
-                Criar Nova Conta
-              </button>
-            </div>
-          </div>
-        )}
 
-        {activeTab === 'CHECKOUT' && (
-          <CheckoutView
-            currentUser={currentUser} cart={cart} cartTotal={cartItemsTotal} stores={stores}
-            handleUpdateCartQuantity={handleUpdateCartQuantity}
-            handleRemoveFromCart={handleRemoveFromCart}
-            handleClearCart={handleClearCart}
-            checkoutName={checkoutName} setCheckoutName={setCheckoutName}
-            checkoutDocument={checkoutDocument} setCheckoutDocument={setCheckoutDocument}
-            checkoutEmail={checkoutEmail} setCheckoutEmail={setCheckoutEmail}
-            checkoutPhone={checkoutPhone} setCheckoutPhone={setCheckoutPhone}
-            checkoutAddress={checkoutAddress} setCheckoutAddress={setCheckoutAddress}
-            deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
-            handleFinalizePurchase={handleFinalizePurchase}
-            onBack={() => handleTabChange('VITRINE')}
-            activeDeliveryFee={activeDeliveryFee}
-            grandTotal={cartGrandTotal}
-          />
-        )}
-      </main>
-
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-effect border-t border-gray-100 flex justify-around p-3 z-40 shadow-2xl">
-        <MobileNavBtn active={activeTab === 'VITRINE'} icon={<ShoppingBag size={22} />} onClick={() => handleTabChange('VITRINE')} />
-        <MobileNavBtn active={activeTab === 'SERVICOS'} icon={<Briefcase size={22} />} onClick={() => handleTabChange('SERVICOS')} />
-        <MobileNavBtn active={activeTab === 'CULTURAL'} icon={<Globe size={22} />} onClick={() => handleTabChange('CULTURAL')} />
-        <MobileNavBtn active={activeTab === 'DASHBOARD'} icon={<UserIcon size={22} />} onClick={() => handleTabChange('DASHBOARD')} />
-      </nav>
-
-      {showAuth && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in duration-300">
-            <button onClick={() => setShowAuth(false)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-transform hover:rotate-90">✕</button>
-            {authMode === 'SELECTION' && (
-              <div className="space-y-8">
-                <div className="text-center">
-                  <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tighter uppercase tracking-widest text-sm">Entrar no Sistema</h2>
-                  <p className="text-gray-500 font-medium">Selecione seu perfil de acesso</p>
+              {currentUser ? (
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <button onClick={() => handleTabChange('DASHBOARD')} className={`flex items-center gap-2 p-2 px-3 rounded-xl transition-colors ${activeTab === 'DASHBOARD' ? 'bg-green-100 text-green-700 font-bold' : 'text-gray-500 hover:bg-gray-100'}`}>
+                    <UserIcon size={20} />
+                    <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">Painel</span>
+                  </button>
+                  <button onClick={logout} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"><LogOut size={20} /></button>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <RoleCard icon={<UserCircle className="text-green-500" size={24} />} title="Cliente" onClick={() => { setSelectedRole('CLIENTE'); setAuthMode('LOGIN'); }} />
-                  <RoleCard icon={<StoreIcon className="text-orange-500" size={24} />} title="Lojista" onClick={() => { setSelectedRole('LOJISTA'); setAuthMode('LOGIN'); }} />
-                  <RoleCard icon={<ShieldCheck className="text-purple-500" size={24} />} title="DEV" onClick={() => { setSelectedRole('DEV'); setAuthMode('LOGIN'); }} />
-                </div>
-                <div className="pt-4 text-center border-t border-gray-100">
+              ) : (
+                <div className="flex items-center gap-1 sm:gap-2">
                   <button
-                    onClick={() => { setAuthMode('REGISTER'); setSelectedRole('CLIENTE'); }}
-                    className="text-green-600 font-black uppercase tracking-widest text-[10px] hover:underline"
+                    onClick={() => { setAuthMode('REGISTER'); setSelectedRole('CLIENTE'); setShowAuth(true); }}
+                    className="px-3 sm:px-5 py-2.5 text-green-600 font-black hover:bg-green-50 rounded-xl transition-all text-[9px] sm:text-[10px] uppercase tracking-widest"
                   >
-                    Novo por aqui? Criar conta de Cliente
+                    Cadastre-se
+                  </button>
+                  <button
+                    onClick={() => { setAuthMode('SELECTION'); setShowAuth(true); }}
+                    className="px-4 sm:px-5 py-2.5 bg-orange-500 text-white font-black rounded-xl hover:bg-orange-600 shadow-md text-[9px] sm:text-[10px] uppercase tracking-widest transition-all"
+                  >
+                    Entrar
+                  </button>
+                </div>
+              )}
+            </div>
+          </header>
+
+          <main className="max-w-6xl mx-auto px-4 md:px-8 py-8">
+            {!selectedStore && activeTab === 'VITRINE' && (
+              <VitrineView
+                stores={stores}
+                products={products}
+                allRatings={storeRatings}
+                onSelectStore={setSelectedStore}
+                onAddToCart={handleAddToCart}
+              />
+            )}
+            {selectedStore && (
+              <StoreDetailView
+                store={selectedStore}
+                products={products.filter(p => p.storeId === selectedStore.id)}
+                allRatings={storeRatings}
+                onBack={() => setSelectedStore(null)}
+                onAddToCart={handleAddToCart}
+              />
+            )}
+            {!selectedService && activeTab === 'SERVICOS' && <ServicosView services={services} onSelectService={setSelectedService} />}
+            {selectedService && <ServiceDetailView service={selectedService} onBack={() => setSelectedService(null)} onRequestQuote={(s) => {
+              const msg = `Olá ${s.name}, vi seu perfil no Vitrine Frutal e gostaria de solicitar um orçamento para o serviço de ${s.type}.`;
+              window.open(`https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+            }} />}
+            {!selectedCulturalItem && activeTab === 'CULTURAL' && <GiroCulturalView items={culturalItems} onSelectItem={setSelectedCulturalItem} />}
+            {selectedCulturalItem && <CulturalDetailView item={selectedCulturalItem} onBack={() => setSelectedCulturalItem(null)} />}
+
+            {activeTab === 'DASHBOARD' && currentUser && (
+              <DashboardView
+                user={currentUser}
+                setCurrentUser={setCurrentUser}
+                stores={stores} setStores={setStores}
+                products={products} setProducts={setProducts}
+                orders={orders} setOrders={setOrders}
+                services={services} setServices={setServices}
+                culturalItems={culturalItems} setCulturalItems={setCulturalItems}
+                showSuccess={showSuccess}
+                showError={showError}
+                logout={logout}
+                storeRatings={storeRatings}
+                setSelectedOrderForRating={setSelectedOrderForRating}
+                setShowRatingModal={setShowRatingModal}
+              />
+            )}
+
+            {activeTab === 'DASHBOARD' && !currentUser && (
+              <div className="flex flex-col items-center justify-center py-20 text-center space-y-8 animate-in fade-in">
+                <div className="w-24 h-24 bg-gray-50 rounded-[2.5rem] flex items-center justify-center text-gray-300">
+                  <UserIcon size={48} />
+                </div>
+                <div className="max-w-xs px-4">
+                  <h3 className="text-2xl font-black text-black uppercase tracking-tighter">Acesso Restrito</h3>
+                  <p className="text-gray-500 mt-2 font-medium">Faça login ou cadastre-se para gerenciar seus pedidos, sua loja ou prestação de serviços.</p>
+                </div>
+                <div className="flex flex-col w-full max-w-xs gap-3 px-6">
+                  <button
+                    onClick={() => { setAuthMode('SELECTION'); setShowAuth(true); }}
+                    className="w-full py-4 bg-orange-500 text-white font-black rounded-2xl shadow-xl hover:bg-orange-600 transition-all uppercase tracking-widest text-[10px]"
+                  >
+                    Entrar agora
+                  </button>
+                  <button
+                    onClick={() => { setAuthMode('REGISTER'); setSelectedRole('CLIENTE'); setShowAuth(true); }}
+                    className="w-full py-4 bg-white text-green-600 border-2 border-green-100 hover:border-green-200 font-black rounded-2xl transition-all uppercase tracking-widest text-[10px]"
+                  >
+                    Criar Nova Conta
                   </button>
                 </div>
               </div>
             )}
-            {authMode === 'LOGIN' && (
-              <div className="space-y-6">
-                <button onClick={() => setAuthMode('SELECTION')} className="text-orange-600 font-bold text-sm">← Voltar</button>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><UserIcon size={20} /></div>
-                  <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase tracking-widest text-sm">Acesso {selectedRole}</h2>
-                </div>
-                <form onSubmit={handleLogin} className="flex flex-col gap-4">
-                  <div className="relative group">
-                    <input required name="email" type={showEmail ? "text" : "email"} placeholder="E-mail" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-orange-200 transition-all pr-12" />
-                    <button type="button" onClick={() => setShowEmail(!showEmail)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors">
-                      {showEmail ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
 
-                  <div className="relative group">
-                    <input required name="password" type={showPassword ? "text" : "password"} placeholder="Senha" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-orange-200 transition-all pr-12" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors">
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
+            {activeTab === 'CHECKOUT' && (
+              <CheckoutView
+                currentUser={currentUser} cart={cart} cartTotal={cartItemsTotal} stores={stores}
+                handleUpdateCartQuantity={handleUpdateCartQuantity}
+                handleRemoveFromCart={handleRemoveFromCart}
+                handleClearCart={handleClearCart}
+                checkoutName={checkoutName} setCheckoutName={setCheckoutName}
+                checkoutDocument={checkoutDocument} setCheckoutDocument={setCheckoutDocument}
+                checkoutEmail={checkoutEmail} setCheckoutEmail={setCheckoutEmail}
+                checkoutPhone={checkoutPhone} setCheckoutPhone={setCheckoutPhone}
+                checkoutAddress={checkoutAddress} setCheckoutAddress={setCheckoutAddress}
+                deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
+                handleFinalizePurchase={handleFinalizePurchase}
+                onBack={() => handleTabChange('VITRINE')}
+                activeDeliveryFee={activeDeliveryFee}
+                grandTotal={cartGrandTotal}
+              />
+            )}
+          </main>
 
-                  <label className="flex items-center gap-3 px-2 cursor-pointer group">
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        className="peer hidden"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                      />
-                      <div className="w-5 h-5 border-2 border-gray-200 rounded-lg transition-all peer-checked:bg-orange-500 peer-checked:border-orange-500 group-hover:border-orange-300"></div>
-                      <div className="absolute inset-0 flex items-center justify-center text-white scale-0 transition-transform peer-checked:scale-100">
-                        <CheckCircle2 size={14} />
-                      </div>
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 glass-effect border-t border-gray-100 flex justify-around p-3 z-40 shadow-2xl">
+            <MobileNavBtn active={activeTab === 'VITRINE'} icon={<ShoppingBag size={22} />} onClick={() => handleTabChange('VITRINE')} />
+            <MobileNavBtn active={activeTab === 'SERVICOS'} icon={<Briefcase size={22} />} onClick={() => handleTabChange('SERVICOS')} />
+            <MobileNavBtn active={activeTab === 'CULTURAL'} icon={<Globe size={22} />} onClick={() => handleTabChange('CULTURAL')} />
+            <MobileNavBtn active={activeTab === 'DASHBOARD'} icon={<UserIcon size={22} />} onClick={() => handleTabChange('DASHBOARD')} />
+          </nav>
+
+          {showAuth && (
+            <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl relative animate-in zoom-in duration-300">
+                <button onClick={() => setShowAuth(false)} className="absolute top-8 right-8 text-gray-400 hover:text-gray-600 transition-transform hover:rotate-90">✕</button>
+                {authMode === 'SELECTION' && (
+                  <div className="space-y-8">
+                    <div className="text-center">
+                      <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tighter uppercase tracking-widest text-sm">Entrar no Sistema</h2>
+                      <p className="text-gray-500 font-medium">Selecione seu perfil de acesso</p>
                     </div>
-                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-gray-700 transition-colors">Manter conectado neste dispositivo</span>
-                  </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      <RoleCard icon={<UserCircle className="text-green-500" size={24} />} title="Cliente" onClick={() => { setSelectedRole('CLIENTE'); setAuthMode('LOGIN'); }} />
+                      <RoleCard icon={<StoreIcon className="text-orange-500" size={24} />} title="Lojista" onClick={() => { setSelectedRole('LOJISTA'); setAuthMode('LOGIN'); }} />
+                      <RoleCard icon={<ShieldCheck className="text-purple-500" size={24} />} title="DEV" onClick={() => { setSelectedRole('DEV'); setAuthMode('LOGIN'); }} />
+                    </div>
+                    <div className="pt-4 text-center border-t border-gray-100">
+                      <button
+                        onClick={() => { setAuthMode('REGISTER'); setSelectedRole('CLIENTE'); }}
+                        className="text-green-600 font-black uppercase tracking-widest text-[10px] hover:underline"
+                      >
+                        Novo por aqui? Criar conta de Cliente
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {authMode === 'LOGIN' && (
+                  <div className="space-y-6">
+                    <button onClick={() => setAuthMode('SELECTION')} className="text-orange-600 font-bold text-sm">← Voltar</button>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><UserIcon size={20} /></div>
+                      <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase tracking-widest text-sm">Acesso {selectedRole}</h2>
+                    </div>
+                    <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                      <div className="relative group">
+                        <input required name="email" type={showEmail ? "text" : "email"} placeholder="E-mail" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-orange-200 transition-all pr-12" />
+                        <button type="button" onClick={() => setShowEmail(!showEmail)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors">
+                          {showEmail ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
 
-                  <button type="submit" className="w-full py-4 bg-orange-500 text-white font-black rounded-2xl hover:bg-orange-600 shadow-xl transition-all uppercase tracking-widest text-xs">Entrar agora</button>
-                </form>
+                      <div className="relative group">
+                        <input required name="password" type={showPassword ? "text" : "password"} placeholder="Senha" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-orange-200 transition-all pr-12" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500 transition-colors">
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+
+                      <label className="flex items-center gap-3 px-2 cursor-pointer group">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            className="peer hidden"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                          />
+                          <div className="w-5 h-5 border-2 border-gray-200 rounded-lg transition-all peer-checked:bg-orange-500 peer-checked:border-orange-500 group-hover:border-orange-300"></div>
+                          <div className="absolute inset-0 flex items-center justify-center text-white scale-0 transition-transform peer-checked:scale-100">
+                            <CheckCircle2 size={14} />
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-gray-700 transition-colors">Manter conectado neste dispositivo</span>
+                      </label>
+
+                      <button type="submit" className="w-full py-4 bg-orange-500 text-white font-black rounded-2xl hover:bg-orange-600 shadow-xl transition-all uppercase tracking-widest text-xs">Entrar agora</button>
+                    </form>
+                    <div className="pt-4 text-center border-t border-gray-100">
+                      <button
+                        onClick={() => setAuthMode('REGISTER')}
+                        className="text-gray-400 font-bold text-[10px] uppercase tracking-widest hover:text-orange-600"
+                      >
+                        Não tem uma conta? <span className="text-orange-500 underline">Cadastre-se aqui</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {authMode === 'REGISTER' && (
+                  <div className="space-y-6">
+                    <button onClick={() => setAuthMode('SELECTION')} className="text-green-600 font-bold text-sm hover:underline">← Voltar</button>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 rounded-lg text-green-600"><Plus size={20} /></div>
+                      <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase tracking-widest text-sm">Novo Cadastro</h2>
+                    </div>
+                    <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                      <input required name="name" type="text" placeholder="Seu nome completo" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all" />
+
+                      <div className="relative group">
+                        <input required name="email" type={showEmail ? "text" : "email"} placeholder="Seu melhor e-mail" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all pr-12" />
+                        <button type="button" onClick={() => setShowEmail(!showEmail)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-600 transition-colors">
+                          {showEmail ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+
+                      <div className="relative group">
+                        <input required name="password" type={showPassword ? "text" : "password"} placeholder="Crie uma senha segura" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all pr-12" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-600 transition-colors">
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-medium px-2 uppercase tracking-widest">Cadastro exclusivo para clientes e usuários da plataforma.</p>
+                      <button type="submit" className="w-full py-4 bg-green-600 text-white font-black rounded-2xl hover:bg-green-700 shadow-xl transition-all mt-4 uppercase tracking-widest text-xs">Concluir Registro</button>
+                    </form>
+                    <div className="pt-4 text-center border-t border-gray-100">
+                      <button
+                        onClick={() => setAuthMode('LOGIN')}
+                        className="text-gray-400 font-bold text-[10px] uppercase tracking-widest hover:text-green-600"
+                      >
+                        Já possui conta? <span className="text-green-500 underline">Faça login aqui</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-            {authMode === 'REGISTER' && (
-              <div className="space-y-6">
-                <button onClick={() => setAuthMode('SELECTION')} className="text-green-600 font-bold text-sm hover:underline">← Voltar</button>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg text-green-600"><Plus size={20} /></div>
-                  <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase tracking-widest text-sm">Novo Cadastro</h2>
+            </div>
+          )}
+
+          {showOrderSuccess && (
+            <div className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-white w-full max-md rounded-[3rem] p-10 text-center shadow-2xl animate-in zoom-in duration-300 relative">
+                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600">
+                  <PartyPopper size={48} />
                 </div>
-                <form onSubmit={handleLogin} className="flex flex-col gap-4">
-                  <input required name="name" type="text" placeholder="Seu nome completo" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all" />
-
-                  <div className="relative group">
-                    <input required name="email" type={showEmail ? "text" : "email"} placeholder="Seu melhor e-mail" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all pr-12" />
-                    <button type="button" onClick={() => setShowEmail(!showEmail)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-600 transition-colors">
-                      {showEmail ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-
-                  <div className="relative group">
-                    <input required name="password" type={showPassword ? "text" : "password"} placeholder="Crie uma senha segura" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all pr-12" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-green-600 transition-colors">
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-gray-400 font-medium px-2 uppercase tracking-widest">Cadastro exclusivo para clientes e usuários da plataforma.</p>
-                  <button type="submit" className="w-full py-4 bg-green-600 text-white font-black rounded-2xl hover:bg-green-700 shadow-xl transition-all mt-4 uppercase tracking-widest text-xs">Concluir Registro</button>
-                </form>
+                <h2 className="text-3xl font-black text-gray-900 mb-2">Compra Realizada!</h2>
+                <p className="text-gray-500 font-medium mb-8">
+                  Obrigado por apoiar o comércio local de Frutal. O pedido foi enviado via WhatsApp para a loja parceira.
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={closeOrderSuccess}
+                    className="w-full py-4 bg-green-600 text-white font-black rounded-2xl shadow-xl hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
+                  >
+                    <CheckCircle size={20} /> Concluído
+                  </button>
+                  <button
+                    onClick={() => { setShowOrderSuccess(false); setActiveTab('VITRINE'); }}
+                    className="w-full py-4 bg-gray-50 text-gray-600 font-black rounded-2xl hover:bg-gray-100 transition-all uppercase tracking-widest text-xs"
+                  >
+                    Ver Outras Lojas
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {showOrderSuccess && (
-        <div className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white w-full max-md rounded-[3rem] p-10 text-center shadow-2xl animate-in zoom-in duration-300 relative">
-            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600">
-              <PartyPopper size={48} />
             </div>
-            <h2 className="text-3xl font-black text-gray-900 mb-2">Compra Realizada!</h2>
-            <p className="text-gray-500 font-medium mb-8">
-              Obrigado por apoiar o comércio local de Frutal. O pedido foi enviado via WhatsApp para a loja parceira.
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={closeOrderSuccess}
-                className="w-full py-4 bg-green-600 text-white font-black rounded-2xl shadow-xl hover:bg-green-700 transition-all active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
-              >
-                <CheckCircle size={20} /> Concluído
-              </button>
-              <button
-                onClick={() => { setShowOrderSuccess(false); setActiveTab('VITRINE'); }}
-                className="w-full py-4 bg-gray-50 text-gray-600 font-black rounded-2xl hover:bg-gray-100 transition-all uppercase tracking-widest text-xs"
-              >
-                Ver Outras Lojas
-              </button>
-            </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </div>
   );

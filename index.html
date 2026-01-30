@@ -1,23 +1,69 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vitrine Frutal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f9fafb;
-      }
-      .glass-effect {
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-      }
-    </style>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vitrine Frutal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f9fafb;
+    }
+
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Ocultar Vercel Toolbar */
+    vercel-toolbar,
+    .vercel-toolbar,
+    [data-vercel-toolbar],
+    #__next-vercel-toolbar,
+    #vercel-live-feedback {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      height: 0 !important;
+      width: 0 !important;
+    }
+  </style>
+  <script>
+    // Script ultra-agressivo para remover a toolbar e iframes da vercel
+    const removeVercelToolbar = () => {
+      const elements = [
+        'vercel-toolbar',
+        '.vercel-toolbar',
+        '[data-vercel-toolbar]',
+        '#__next-vercel-toolbar',
+        '#vercel-live-feedback',
+        '.vercel-live-feedback',
+        '#vercel-toolbar-iframe',
+        'iframe[src*="vercel"]'
+      ];
+      elements.forEach(selector => {
+        document.querySelectorAll(selector).forEach(el => {
+          el.style.display = 'none';
+          el.remove();
+        });
+      });
+      // Remover shadow roots se existirem
+      document.querySelectorAll('*').forEach(el => {
+        if (el.shadowRoot) {
+          elements.forEach(selector => {
+            el.shadowRoot.querySelectorAll(selector).forEach(innerEl => innerEl.remove());
+          });
+        }
+      });
+    };
+    setInterval(removeVercelToolbar, 300);
+    window.addEventListener('load', removeVercelToolbar);
+  </script>
   <script type="importmap">
 {
   "imports": {
@@ -28,12 +74,14 @@
   }
 }
 </script>
-    <meta name="theme-color" content="#f97316" />
-    <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="/index.css">
+  <meta name="theme-color" content="#f97316" />
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
-    <div id="root"></div>
+
+<body>
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>
