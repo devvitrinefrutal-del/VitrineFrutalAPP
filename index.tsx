@@ -4,8 +4,6 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-console.log('--- [DEBUG] Vitrine Frutal: Booting App v1.0.1 ---');
-
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
@@ -20,6 +18,8 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   constructor(props: { children: React.ReactNode }) {
     super(props);
   }
+
+  declare props: { children: React.ReactNode };
 
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
@@ -42,7 +42,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
         </div>
       );
     }
-    return this.props.children;
+    return children;
   }
 }
 

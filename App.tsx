@@ -130,11 +130,9 @@ export default function App() {
 
   // Supabase Fetching
   useEffect(() => {
-    console.log('--- [DEBUG] useEffect Mount ---');
     let isMounted = true;
 
     const fetchData = async () => {
-      console.log('--- [DEBUG] fetchData Start ---');
       setIsLoading(true);
 
       const timeoutId = setTimeout(() => {
@@ -240,7 +238,6 @@ export default function App() {
         } catch (e) {
           console.error('Erro ratings:', e);
         }
-        console.log('--- fetchData concluído com sucesso ---');
 
       } catch (err: any) {
         if (isMounted) {
@@ -254,7 +251,6 @@ export default function App() {
         }
       } finally {
         clearTimeout(timeoutId);
-        console.log('--- Finalizando isLoading ---');
         setIsLoading(false); // Sempre resetar isLoading para evitar tela travada
       }
     };
