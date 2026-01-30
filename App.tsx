@@ -131,7 +131,25 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
+
+      // Timeout de segurança: Se em 10 segundos não carregar, libera a tela
+      const timeoutId = setTimeout(() => {
+        setIsLoading(false);
+      }, 10000);
+
       try {
+        // Verificar se as chaves do Supabase estão configuradas
+        const isPlaceholder = !import.meta.env.VITE_SUPABASE_URL ||
+          import.meta.env.VITE_SUPABASE_URL.includes('placeholder');
+
+        if (isPlaceholder) {
+          console.error("Variáveis de ambiente do Supabase não configuradas!");
+          setConnectionError(true);
+          clearTimeout(timeoutId);
+          setIsLoading(false);
+          return;
+        }
+
         // Parallel fetch for core data
         const [
           { data: storesData, error: storesError },
@@ -151,9 +169,7 @@ export default function App() {
         if (productsError) console.error('Erro produtos:', productsError);
         if (servicesError) console.error('Erro serviços:', servicesError);
         if (culturalError) console.error('Erro cultural:', culturalError);
-        if (ordersError) console.warn('Erro pedidos (esperado se não logado):', ordersError);
 
-        // Somente erro na busca de lojas é considerado erro de conexão crítico
         if (storesError) {
           setConnectionError(true);
         } else {
@@ -161,7 +177,6 @@ export default function App() {
         }
 
         if (storesData) {
-          console.log(`Lojas carregadas: ${storesData.length}`);
           setStores(storesData.map((s: any) => ({
             ...s,
             ownerId: s.owner_id,
@@ -170,7 +185,6 @@ export default function App() {
         }
 
         if (productsData) {
-          console.log(`Produtos carregados: ${productsData.length}`);
           setProducts(productsData.map((p: any) => ({
             ...p,
             storeId: p.store_id
@@ -178,7 +192,6 @@ export default function App() {
         }
 
         if (servicesData) {
-          console.log(`Serviços carregados: ${servicesData.length}`);
           setServices(servicesData.map((s: any) => ({
             ...s,
             providerId: s.provider_id,
@@ -205,7 +218,7 @@ export default function App() {
           })));
         }
 
-        // Fetch Store Ratings (Opcional, não deve travar)
+        // Fetch Store Ratings (Não deve travar se falhar)
         try {
           const { data: ratingsData } = await supabase.from('store_ratings').select('*');
           if (ratingsData) {
@@ -225,6 +238,7 @@ export default function App() {
         console.error('Erro global na busca:', err);
         setConnectionError(true);
       } finally {
+        clearTimeout(timeoutId);
         setIsLoading(false);
       }
     };
@@ -708,9 +722,18 @@ export default function App() {
       <Analytics />
 
       {isLoading ? (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-6 animate-in fade-in duration-500">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 flex-col gap-6 animate-in fade-in duration-500 p-6 text-center">
           <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 animate-pulse">Sincronizando com Frutal...</p>
+          <div className="mt-8 space-y-4 max-w-xs">
+            <p className="text-[9px] text-gray-300 font-medium uppercase tracking-widest">Se demorar muito, pode ser um problema de conexão ou configuração.</p>
+            <button
+              onClick={() => setIsLoading(false)}
+              className="text-[10px] bg-white border border-gray-200 text-gray-400 px-6 py-3 rounded-xl font-bold uppercase tracking-widest hover:border-orange-200 hover:text-orange-500 transition-all"
+            >
+              Pular Carregamento
+            </button>
+          </div>
         </div>
       ) : (
         <>
