@@ -517,17 +517,24 @@ export default function App() {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      console.log('--- Início da tentativa de login ---');
       showSuccess('Iniciando tentativa de entrada...');
       const formData = new FormData(e.currentTarget);
       const email = (formData.get('email') as string).trim().toLowerCase();
       const password = (formData.get('password') as string).trim();
       const name = formData.get('name') as string || 'Usuário';
 
+      console.log('Modo de autenticação:', authMode);
+      console.log('Email:', email);
+
       const isAuthorizedDev = email === 'devvitrinefrutal@gmail.com';
 
       if (authMode === 'LOGIN') {
+        console.log('Chamando supabase.auth.signInWithPassword...');
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
         if (error) {
+          console.error('Erro no signInWithPassword:', error);
           if (error.message.includes('Invalid login credentials')) {
             showError('E-mail ou senha incorretos. Verifique seus dados.');
           } else {
@@ -536,7 +543,15 @@ export default function App() {
           return;
         }
 
+        console.log('Login Auth OK. User ID:', data.user?.id);
+        console.log('Buscando perfil na tabela profiles...');
         let { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+
+        if (profileError) {
+          console.warn('Aviso ou erro ao buscar perfil:', profileError);
+        } else {
+          console.log('Perfil encontrado:', profile);
+        }
 
         if (isAuthorizedDev) {
           if (!profile) {
