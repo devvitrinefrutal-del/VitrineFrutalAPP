@@ -127,20 +127,16 @@ export default function App() {
 
   const user = currentUser;
 
-  const isFetching = React.useRef(false);
-
   // Supabase Fetching
   useEffect(() => {
-    if (isFetching.current) return;
+    let isMounted = true;
 
     const fetchData = async () => {
-      isFetching.current = true;
       setIsLoading(true);
 
-      // Timeout de segurança: Se em 10 segundos não carregar, libera a tela
       const timeoutId = setTimeout(() => {
-        setIsLoading(false);
-      }, 10000);
+        if (isMounted) setIsLoading(false);
+      }, 15000);
 
       try {
         // Verificar se as chaves do Supabase estão configuradas
@@ -239,29 +235,33 @@ export default function App() {
             })));
           }
         } catch (e) {
-          console.error('Erro avaliações:', e);
+          // Ignora erro de ratings
         }
 
-      } catch (err) {
-        console.error('Erro global na busca:', err);
-        setConnectionError(true);
+      } catch (err: any) {
+        if (isMounted) {
+          const isAbort = err?.name === 'AbortError' || err?.message?.includes('AbortError');
+          if (!isAbort) {
+            console.error("Fetch fatal error:", err);
+            setConnectionError(true);
+          }
+        }
       } finally {
         clearTimeout(timeoutId);
-        setIsLoading(false);
-        isFetching.current = false;
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchData();
 
-    // Online/Offline Listeners
-    const handleOnline = () => { setConnectionError(false); fetchData(); };
-    const handleOffline = () => setConnectionError(true);
+    const handleOnline = () => { if (isMounted) { setConnectionError(false); fetchData(); } };
+    const handleOffline = () => { if (isMounted) setConnectionError(true); };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     return () => {
+      isMounted = false;
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
