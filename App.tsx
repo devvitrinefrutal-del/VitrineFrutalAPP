@@ -90,6 +90,7 @@ function normalizeWhatsApp(input: string): string {
 }
 
 export default function App() {
+  console.log('--- App component inicializado (Mount) ---');
   const [activeTab, setActiveTab] = useState<'VITRINE' | 'SERVICOS' | 'CULTURAL' | 'DASHBOARD' | 'CHECKOUT'>('VITRINE');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
