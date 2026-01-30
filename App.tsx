@@ -634,7 +634,9 @@ export default function App() {
         password,
         options: {
           data: { full_name: name, role: finalRole },
-          emailRedirectTo: window.location.origin
+          emailRedirectTo: window.location.origin.includes('localhost')
+            ? window.location.origin
+            : window.location.origin // No Vercel, o origin já será o domínio correto
         }
       });
 
