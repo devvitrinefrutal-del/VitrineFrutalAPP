@@ -740,8 +740,10 @@ export default function App() {
           </div>
         </div>
       )}
+      {/* Temporariamente desativado para diagnóstico de conflito no login
       <SpeedInsights />
       <Analytics />
+      */}
 
       {isLoading && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-white/60 backdrop-blur-sm flex-col gap-6 p-6 text-center">
