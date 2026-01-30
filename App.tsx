@@ -235,8 +235,9 @@ export default function App() {
             })));
           }
         } catch (e) {
-          // Ignora erro de ratings
+          console.error('Erro ratings:', e);
         }
+        console.log('--- fetchData concluído com sucesso ---');
 
       } catch (err: any) {
         if (isMounted) {
@@ -244,11 +245,14 @@ export default function App() {
           if (!isAbort) {
             console.error("Fetch fatal error:", err);
             setConnectionError(true);
+          } else {
+            console.log('--- fetchData abortado (React mount/unmount) ---');
           }
         }
       } finally {
         clearTimeout(timeoutId);
-        if (isMounted) setIsLoading(false);
+        console.log('--- Finalizando isLoading ---');
+        setIsLoading(false); // Sempre resetar isLoading para evitar tela travada
       }
     };
 
