@@ -90,6 +90,7 @@ function normalizeWhatsApp(input: string): string {
 }
 
 export default function App() {
+  console.log('--- [DEBUG] App Component Renderizado ---');
   const [activeTab, setActiveTab] = useState<'VITRINE' | 'SERVICOS' | 'CULTURAL' | 'DASHBOARD' | 'CHECKOUT'>('VITRINE');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -129,9 +130,11 @@ export default function App() {
 
   // Supabase Fetching
   useEffect(() => {
+    console.log('--- [DEBUG] useEffect Mount ---');
     let isMounted = true;
 
     const fetchData = async () => {
+      console.log('--- [DEBUG] fetchData Start ---');
       setIsLoading(true);
 
       const timeoutId = setTimeout(() => {
