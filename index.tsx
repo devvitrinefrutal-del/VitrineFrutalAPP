@@ -2,6 +2,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './index.css';
+
+console.log('--- [DEBUG] Vitrine Frutal: Booting App v1.0.1 ---');
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -23,6 +26,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 
   render() {
+    const { children } = this.props;
     if (this.state.hasError) {
       return (
         <div style={{ padding: 20, fontFamily: 'sans-serif', textAlign: 'center' }}>

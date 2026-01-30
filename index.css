@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased text-slate-900 bg-slate-50;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+.glass-effect {
+  @apply bg-white/80 backdrop-blur-md border border-white/20;
+}
+
+/* Ocultar Vercel Toolbar */
+vercel-toolbar,
+.vercel-toolbar,
+[data-vercel-toolbar],
+#__next-vercel-toolbar,
+#vercel-live-feedback,
+.vercel-live-feedback,
+#vercel-toolbar-iframe,
+[id^="vercel-"],
+[class^="vercel-"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
+}
