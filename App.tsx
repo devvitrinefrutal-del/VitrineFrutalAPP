@@ -131,8 +131,6 @@ export default function App() {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      console.log("Iniciando busca de dados Supabase...");
-
       try {
         // Parallel fetch for core data
         const [
@@ -189,7 +187,6 @@ export default function App() {
         }
 
         if (culturalData) {
-          console.log(`Itens culturais carregados: ${culturalData.length}`);
           setCulturalItems(culturalData);
         }
 
@@ -263,13 +260,10 @@ export default function App() {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth event:", event, session?.user?.email);
 
       if (session?.user) {
-        console.log("Sessão ativa encontrada:", session.user.id);
         const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
         if (profile) {
-          console.log("Perfil carregado via AuthChange:", profile.role);
           // Sync storeId/serviceId if applicable
           const { data: storeMatch } = await supabase.from('stores').select('id').eq('email', session.user.email).maybeSingle();
           const { data: serviceMatch } = await supabase.from('services').select('id').eq('email', session.user.email).maybeSingle();
@@ -525,9 +519,7 @@ export default function App() {
         return;
       }
 
-      console.log("Tentativa de login para:", email);
       let { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
-      console.log("Resultado busca perfil:", profile ? "Encontrado" : "Não encontrado", profileError);
 
       if (isAuthorizedDev) {
         if (!profile) {
@@ -1831,24 +1823,28 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
     setUploadedImages([]);
   };
 
-  const handleSaveCulturalItem = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveCulturalItem = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const data = {
+    const data: any = {
       title: fd.get('title') as string,
       type: fd.get('type') as string,
       date: fd.get('date') as string,
       description: fd.get('description') as string,
-      image: uploadedImages[0] || editingCulturalItem?.image || INITIAL_CULTURAL[0].image,
-      images: uploadedImages.length > 0 ? uploadedImages : editingCulturalItem?.images || [],
+      image: uploadedImages[0] || editingCulturalItem?.image || 'https://images.unsplash.com/photo-1514525253361-bee8718a340b?w=800',
+      images: uploadedImages.length > 0 ? uploadedImages : (editingCulturalItem?.images || []),
     };
 
     if (editingCulturalItem) {
+      const { error } = await supabase.from('cultural_items').update(data).eq('id', editingCulturalItem.id);
+      if (error) { showError('Erro ao atualizar Giro Cultural: ' + error.message); return; }
       setCulturalItems((prev: CulturalItem[]) => prev.map((c: CulturalItem) => c.id === editingCulturalItem.id ? { ...c, ...data } : c));
       showSuccess('Giro Cultural atualizado!');
     } else {
-      setCulturalItems((prev: CulturalItem[]) => [...prev, { id: 'c' + Date.now(), ...data }]);
-      showSuccess('Novo Giro Cultural registrado!');
+      const { data: saved, error } = await supabase.from('cultural_items').insert([data]).select();
+      if (error) { showError('Erro ao salvar Giro Cultural: ' + error.message); return; }
+      if (saved) setCulturalItems((prev: CulturalItem[]) => [...prev, saved[0]]);
+      showSuccess('Giro Cultural registrado com sucesso!');
     }
     setShowCulturalModal(false);
     setEditingCulturalItem(null);
@@ -1951,30 +1947,38 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
     showSuccess('Item da vitrine salvo!');
   };
 
-  const handleDeleteStore = (id: string) => {
+  const handleDeleteStore = async (id: string) => {
     if (window.confirm("Deseja realmente excluir esta loja? Todos os dados vinculados serão removidos do sistema.")) {
+      const { error } = await supabase.from('stores').delete().eq('id', id);
+      if (error) { showError('Erro ao excluir loja: ' + error.message); return; }
       setStores((prev: any) => prev.filter((s: any) => s.id !== id));
       setProducts((prev: any) => prev.filter((p: any) => p.storeId !== id));
       showSuccess("Estabelecimento excluído.");
     }
   };
 
-  const handleDeleteService = (id: string) => {
+  const handleDeleteService = async (id: string) => {
     if (window.confirm("Remover este prestador de serviços da base de dados?")) {
+      const { error } = await supabase.from('services').delete().eq('id', id);
+      if (error) { showError('Erro ao excluir serviço: ' + error.message); return; }
       setServices((prev: any) => prev.filter((s: any) => s.id !== id));
       showSuccess("Prestador removido.");
     }
   };
 
-  const handleDeleteCultural = (id: string) => {
+  const handleDeleteCultural = async (id: string) => {
     if (window.confirm("Excluir este item do Giro Cultural? Esta ação não pode ser desfeita.")) {
+      const { error } = await supabase.from('cultural_items').delete().eq('id', id);
+      if (error) { showError('Erro ao excluir item cultural: ' + error.message); return; }
       setCulturalItems((prev: any) => prev.filter((c: any) => c.id !== id));
       showSuccess("Item cultural removido.");
     }
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     if (window.confirm("Deseja remover este item da sua vitrine?")) {
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) { showError('Erro ao excluir produto: ' + error.message); return; }
       setProducts((prev: any) => prev.filter((p: any) => p.id !== id));
       showSuccess("Item excluído.");
     }
