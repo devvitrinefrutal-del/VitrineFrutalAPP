@@ -90,7 +90,6 @@ function normalizeWhatsApp(input: string): string {
 }
 
 export default function App() {
-  console.log('--- App component inicializado (Mount) ---');
   const [activeTab, setActiveTab] = useState<'VITRINE' | 'SERVICOS' | 'CULTURAL' | 'DASHBOARD' | 'CHECKOUT'>('VITRINE');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -128,9 +127,14 @@ export default function App() {
 
   const user = currentUser;
 
+  const isFetching = React.useRef(false);
+
   // Supabase Fetching
   useEffect(() => {
+    if (isFetching.current) return;
+
     const fetchData = async () => {
+      isFetching.current = true;
       setIsLoading(true);
 
       // Timeout de segurança: Se em 10 segundos não carregar, libera a tela
@@ -139,21 +143,12 @@ export default function App() {
       }, 10000);
 
       try {
-        console.log('--- Início da busca de dados (fetchData) ---');
         // Verificar se as chaves do Supabase estão configuradas
         const rawUrl = import.meta.env.VITE_SUPABASE_URL;
         const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-        console.log('Verificando variáveis de ambiente:', {
-          urlDefined: !!rawUrl,
-          keyDefined: !!rawKey,
-          isPlaceholder: rawUrl?.includes('placeholder')
-        });
-
         const isPlaceholder = !rawUrl || rawUrl.includes('placeholder');
 
         if (isPlaceholder) {
-          console.error('ERRO: Segredos não encontrados!');
           showError("ERRO: Segredos do banco não encontrados na Vercel (VITE_...).");
           setConnectionError(true);
           clearTimeout(timeoutId);
@@ -161,25 +156,20 @@ export default function App() {
           return;
         }
 
-        console.log('Buscando LOJAS...');
-        const { data: storesData, error: storesError } = await supabase.from('stores').select('*');
-        console.log('LOJAS:', storesError ? 'ERRO' : 'OK (' + (storesData?.length || 0) + ')');
-
-        console.log('Buscando PRODUTOS...');
-        const { data: productsData, error: productsError } = await supabase.from('products').select('*');
-        console.log('PRODUTOS:', productsError ? 'ERRO' : 'OK (' + (productsData?.length || 0) + ')');
-
-        console.log('Buscando SERVIÇOS...');
-        const { data: servicesData, error: servicesError } = await supabase.from('services').select('*');
-        console.log('SERVIÇOS:', servicesError ? 'ERRO' : 'OK (' + (servicesData?.length || 0) + ')');
-
-        console.log('Buscando CULTURAL...');
-        const { data: culturalData, error: culturalError } = await supabase.from('cultural_items').select('*');
-        console.log('CULTURAL:', culturalError ? 'ERRO' : 'OK (' + (culturalData?.length || 0) + ')');
-
-        console.log('Buscando PEDIDOS...');
-        const { data: ordersData, error: ordersError } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-        console.log('PEDIDOS:', ordersError ? 'ERRO' : 'OK (' + (ordersData?.length || 0) + ')');
+        // Parallel fetch for core data
+        const [
+          { data: storesData, error: storesError },
+          { data: productsData, error: productsError },
+          { data: servicesData, error: servicesError },
+          { data: culturalData, error: culturalError },
+          { data: ordersData, error: ordersError }
+        ] = await Promise.all([
+          supabase.from('stores').select('*'),
+          supabase.from('products').select('*'),
+          supabase.from('services').select('*'),
+          supabase.from('cultural_items').select('*'),
+          supabase.from('orders').select('*').order('created_at', { ascending: false })
+        ]);
 
         if (storesError) console.error('Erro lojas:', storesError);
         if (productsError) console.error('Erro produtos:', productsError);
@@ -192,7 +182,7 @@ export default function App() {
           setConnectionError(false);
         }
 
-        console.log('Mapeando e salvando estados locais...');
+
 
         if (storesData) {
           setStores(storesData.map((s: any) => ({
@@ -258,6 +248,7 @@ export default function App() {
       } finally {
         clearTimeout(timeoutId);
         setIsLoading(false);
+        isFetching.current = false;
       }
     };
 
@@ -547,11 +538,9 @@ export default function App() {
       const isAuthorizedDev = email === 'devvitrinefrutal@gmail.com';
 
       if (authMode === 'LOGIN') {
-        console.log('Chamando supabase.auth.signInWithPassword...');
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
-          console.error('Erro no signInWithPassword:', error);
           if (error.message.includes('Invalid login credentials')) {
             showError('E-mail ou senha incorretos. Verifique seus dados.');
           } else {
@@ -560,14 +549,10 @@ export default function App() {
           return;
         }
 
-        console.log('Login Auth OK. User ID:', data.user?.id);
-        console.log('Buscando perfil na tabela profiles...');
         let { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
 
         if (profileError) {
           console.warn('Aviso ou erro ao buscar perfil:', profileError);
-        } else {
-          console.log('Perfil encontrado:', profile);
         }
 
         if (isAuthorizedDev) {
@@ -757,10 +742,8 @@ export default function App() {
           </div>
         </div>
       )}
-      {/* Temporariamente desativado para diagnóstico de conflito no login
       <SpeedInsights />
       <Analytics />
-      */}
 
       {isLoading && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center bg-white/60 backdrop-blur-sm flex-col gap-6 p-6 text-center">
