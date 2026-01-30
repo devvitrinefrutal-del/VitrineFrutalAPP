@@ -161,26 +161,25 @@ export default function App() {
           return;
         }
 
-        console.log('Iniciando Promise.all para buscar lojas, produtos, etc...');
+        console.log('Buscando LOJAS...');
+        const { data: storesData, error: storesError } = await supabase.from('stores').select('*');
+        console.log('LOJAS:', storesError ? 'ERRO' : 'OK (' + (storesData?.length || 0) + ')');
 
-        const fetchPromises = [
-          supabase.from('stores').select('*'),
-          supabase.from('products').select('*'),
-          supabase.from('services').select('*'),
-          supabase.from('cultural_items').select('*'),
-          supabase.from('orders').select('*').order('created_at', { ascending: false })
-        ];
+        console.log('Buscando PRODUTOS...');
+        const { data: productsData, error: productsError } = await supabase.from('products').select('*');
+        console.log('PRODUTOS:', productsError ? 'ERRO' : 'OK (' + (productsData?.length || 0) + ')');
 
-        const results = await Promise.all(fetchPromises);
-        console.log('Busca finalizada. Resultados:', results.map(r => r.error ? 'ERRO' : 'OK (' + (r.data?.length || 0) + ' itens)'));
+        console.log('Buscando SERVIÇOS...');
+        const { data: servicesData, error: servicesError } = await supabase.from('services').select('*');
+        console.log('SERVIÇOS:', servicesError ? 'ERRO' : 'OK (' + (servicesData?.length || 0) + ')');
 
-        const [
-          { data: storesData, error: storesError },
-          { data: productsData, error: productsError },
-          { data: servicesData, error: servicesError },
-          { data: culturalData, error: culturalError },
-          { data: ordersData, error: ordersError }
-        ] = results;
+        console.log('Buscando CULTURAL...');
+        const { data: culturalData, error: culturalError } = await supabase.from('cultural_items').select('*');
+        console.log('CULTURAL:', culturalError ? 'ERRO' : 'OK (' + (culturalData?.length || 0) + ')');
+
+        console.log('Buscando PEDIDOS...');
+        const { data: ordersData, error: ordersError } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+        console.log('PEDIDOS:', ordersError ? 'ERRO' : 'OK (' + (ordersData?.length || 0) + ')');
 
         if (storesError) console.error('Erro lojas:', storesError);
         if (productsError) console.error('Erro produtos:', productsError);
