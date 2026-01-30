@@ -252,6 +252,37 @@ export default function App() {
   }, [currentUser, rememberMe]);
 
   useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth event:", event, session?.user?.email);
+
+      if (session?.user) {
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+        if (profile) {
+          // Sync storeId/serviceId if applicable
+          const { data: storeMatch } = await supabase.from('stores').select('id').eq('email', session.user.email).maybeSingle();
+          const { data: serviceMatch } = await supabase.from('services').select('id').eq('email', session.user.email).maybeSingle();
+
+          const enrichedProfile = {
+            ...profile,
+            storeId: profile.role === 'LOJISTA' ? storeMatch?.id : undefined,
+            serviceId: profile.role === 'PRESTADOR' ? serviceMatch?.id : undefined
+          };
+
+          setCurrentUser(enrichedProfile);
+          if (rememberMe) {
+            localStorage.setItem('vitrine_user', JSON.stringify(enrichedProfile));
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        localStorage.removeItem('vitrine_user');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [rememberMe]);
+
+  useEffect(() => {
     const savedUser = localStorage.getItem('vitrine_user');
     if (savedUser) {
       try {
@@ -575,7 +606,10 @@ export default function App() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: name, role: finalRole } }
+        options: {
+          data: { full_name: name, role: finalRole },
+          emailRedirectTo: window.location.origin
+        }
       });
 
       if (error) {
