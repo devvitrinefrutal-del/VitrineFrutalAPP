@@ -133,87 +133,64 @@ export default function App() {
     let isMounted = true;
 
     const fetchData = async () => {
-      console.log('--- [DEBUG] Início do fetchData ---');
+      console.log('--- [DEBUG] Início do fetchData (Modo Resiliente) ---');
       setIsLoading(true);
 
-      const fetchWithTimeout = async (promise: PromiseLike<any>, timeoutMs: number = 8000) => {
-        let timeoutId: any;
-        const timeoutPromise = new Promise((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs);
+      const rawUrl = import.meta.env.VITE_SUPABASE_URL;
+      const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const isPlaceholder = !rawUrl || rawUrl.includes('placeholder');
+
+      if (isPlaceholder) {
+        showError("Configuração ausente na Vercel.");
+        setIsLoading(false);
+        return;
+      }
+
+      const directFetch = async (table: string, query: string = 'select=*') => {
+        const res = await fetch(`${rawUrl}/rest/v1/${table}?${query}`, {
+          headers: {
+            'apikey': rawKey,
+            'Authorization': `Bearer ${rawKey}`,
+            'Content-Type': 'application/json'
+          }
         });
-        try {
-          const result = await Promise.race([promise, timeoutPromise]);
-          clearTimeout(timeoutId);
-          return result;
-        } catch (error) {
-          clearTimeout(timeoutId);
-          throw error;
-        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
       };
 
       try {
-        const rawUrl = import.meta.env.VITE_SUPABASE_URL;
-        const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        const isPlaceholder = !rawUrl || rawUrl.includes('placeholder');
-
-        if (isPlaceholder) {
-          showError("ERRO: Segredos do banco não encontrados na Vercel (VITE_...).");
-          setConnectionError(true);
-          setIsLoading(false);
-          return;
-        }
-
-        console.log('--- [DEBUG] Buscando lojas... ---');
+        console.log('--- [DEBUG] Buscando lojas (Direct)... ---');
         try {
-          const { data: storesData, error: storesError } = await fetchWithTimeout(supabase.from('stores').select('*').then(r => r));
-          if (storesError) throw storesError;
+          const storesData = await directFetch('stores');
           console.log(`--- [DEBUG] Lojas OK: ${storesData?.length || 0} ---`);
+          setStores(storesData.map((s: any) => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
           setConnectionError(false);
-          if (storesData) {
-            setStores(storesData.map((s: any) => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
-          }
-        } catch (err: any) {
-          console.error('Erro lojas:', err);
-          if (err.message === 'TIMEOUT') showError("Tempo limite excedido ao buscar lojas.");
-          else showError(`Erro ao carregar lojas: ${err.message}`);
+        } catch (e: any) {
+          console.error('Erro lojas:', e);
           setConnectionError(true);
         }
 
-        console.log('--- [DEBUG] Buscando produtos... ---');
+        console.log('--- [DEBUG] Buscando produtos (Direct)... ---');
         try {
-          const { data: productsData, error: productsError } = await fetchWithTimeout(supabase.from('products').select('*').then(r => r));
-          if (productsError) throw productsError;
-          console.log(`--- [DEBUG] Produtos OK: ${productsData.length} ---`);
+          const productsData = await directFetch('products');
           setProducts(productsData.map((p: any) => ({ ...p, storeId: p.store_id })));
-        } catch (err: any) {
-          console.error('Erro produtos:', err);
-        }
+        } catch (e) { console.error('Erro produtos:', e); }
 
-        console.log('--- [DEBUG] Buscando serviços... ---');
+        console.log('--- [DEBUG] Buscando serviços (Direct)... ---');
         try {
-          const { data: servicesData, error: servicesError } = await fetchWithTimeout(supabase.from('services').select('*').then(r => r));
-          if (servicesError) throw servicesError;
-          console.log(`--- [DEBUG] Serviços OK: ${servicesData.length} ---`);
+          const servicesData = await directFetch('services');
           setServices(servicesData.map((s: any) => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate })));
-        } catch (err: any) {
-          console.error('Erro serviços:', err);
-        }
+        } catch (e) { console.error('Erro serviços:', e); }
 
-        console.log('--- [DEBUG] Buscando cultural... ---');
+        console.log('--- [DEBUG] Buscando cultural (Direct)... ---');
         try {
-          const { data: culturalData, error: culturalError } = await fetchWithTimeout(supabase.from('cultural_items').select('*').then(r => r));
-          if (culturalError) throw culturalError;
-          console.log(`--- [DEBUG] Cultural OK: ${culturalData.length} ---`);
+          const culturalData = await directFetch('cultural_items');
           setCulturalItems(culturalData);
-        } catch (err: any) {
-          console.error('Erro cultural:', err);
-        }
+        } catch (e) { console.error('Erro cultural:', e); }
 
-        console.log('--- [DEBUG] Buscando pedidos... ---');
+        console.log('--- [DEBUG] Buscando pedidos (Direct)... ---');
         try {
-          const { data: ordersData, error: ordersError } = await fetchWithTimeout(supabase.from('orders').select('*').order('created_at', { ascending: false }).then(r => r));
-          if (ordersError) throw ordersError;
-          console.log(`--- [DEBUG] Pedidos OK: ${ordersData.length} ---`);
+          const ordersData = await directFetch('orders', 'select=*&order=created_at.desc');
           setOrders(ordersData.map((o: any) => ({
             ...o,
             storeId: o.store_id,
@@ -226,33 +203,23 @@ export default function App() {
             dispatchedAt: o.dispatched_at,
             createdAt: o.created_at
           })));
-        } catch (err: any) {
-          console.error('Erro pedidos:', err);
-        }
+        } catch (e) { console.error('Erro pedidos:', e); }
 
+        console.log('--- [DEBUG] Buscando avaliações (Direct)... ---');
         try {
-          console.log('--- [DEBUG] Buscando avaliações ---');
-          const { data: ratingsData, error: ratingsError } = await fetchWithTimeout(supabase.from('store_ratings').select('*').then(r => r));
-          if (ratingsError) throw ratingsError;
-          if (ratingsData) {
-            console.log(`--- [DEBUG] Avaliações carregadas: ${ratingsData.length} ---`);
-            setStoreRatings(ratingsData.map((r: any) => ({
-              ...r,
-              storeId: r.store_id,
-              orderId: r.order_id,
-              clientId: r.client_id,
-              createdAt: r.created_at
-            })));
-          }
-        } catch (e) {
-          console.error('Erro ratings:', e);
-        }
+          const ratingsData = await directFetch('store_ratings');
+          setStoreRatings(ratingsData.map((r: any) => ({
+            ...r,
+            storeId: r.store_id,
+            orderId: r.order_id,
+            clientId: r.client_id,
+            createdAt: r.created_at
+          })));
+        } catch (e) { console.error('Erro ratings:', e); }
 
       } catch (err: any) {
-        if (isMounted) {
-          console.error("Fetch fatal error:", err);
-          showError(`Erro inesperado: ${err.message}`);
-        }
+        console.error("Fetch fatal error:", err);
+        showError(`Erro de conexão: ${err.message}`);
       } finally {
         if (isMounted) {
           console.log('--- [DEBUG] Finalizando fetchData ---');
