@@ -1886,6 +1886,7 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
 
   const handleSaveCulturalItem = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log('--- [DEBUG] Início handleSaveCulturalItem ---');
     const fd = new FormData(e.currentTarget);
     const data: any = {
       title: fd.get('title') as string,
@@ -1896,20 +1897,48 @@ function DashboardView({ user, setCurrentUser, stores, setStores, products, setP
       images: uploadedImages.length > 0 ? uploadedImages : (editingCulturalItem?.images || []),
     };
 
-    if (editingCulturalItem) {
-      const { error } = await supabase.from('cultural_items').update(data).eq('id', editingCulturalItem.id);
-      if (error) { showError('Erro ao atualizar Giro Cultural: ' + error.message); return; }
-      setCulturalItems((prev: CulturalItem[]) => prev.map((c: CulturalItem) => c.id === editingCulturalItem.id ? { ...c, ...data } : c));
-      showSuccess('Giro Cultural atualizado!');
-    } else {
-      const { data: saved, error } = await supabase.from('cultural_items').insert([data]).select();
-      if (error) { showError('Erro ao salvar Giro Cultural: ' + error.message); return; }
-      if (saved) setCulturalItems((prev: CulturalItem[]) => [...prev, saved[0]]);
-      showSuccess('Giro Cultural registrado com sucesso!');
+    // DEBUG: Verificar tamanho do payload (Base64)
+    const jsonStr = JSON.stringify(data);
+    const sizeInMB = (jsonStr.length / (1024 * 1024)).toFixed(2);
+    console.log(`--- [DEBUG] Tamanho do payload: ${sizeInMB} MB ---`);
+
+    if (parseFloat(sizeInMB) > 6) {
+      console.warn('--- [DEBUG] Payload muito grande (>6MB)! Isso pode falhar na Vercel/Supabase. ---');
+      showError(`Payload muito grande (${sizeInMB}MB). Tente usar menos fotos ou fotos menores.`);
     }
-    setShowCulturalModal(false);
-    setEditingCulturalItem(null);
-    setUploadedImages([]);
+
+    try {
+      if (editingCulturalItem) {
+        console.log('--- [DEBUG] Atualizando Giro Cultural id:', editingCulturalItem.id);
+        const { error } = await supabase.from('cultural_items').update(data).eq('id', editingCulturalItem.id);
+        if (error) {
+          console.error('--- [DEBUG] Erro ao atualizar:', error);
+          showError('Erro ao atualizar Giro Cultural: ' + error.message);
+          return;
+        }
+        setCulturalItems((prev: CulturalItem[]) => prev.map((c: CulturalItem) => c.id === editingCulturalItem.id ? { ...c, ...data } : c));
+        showSuccess('Giro Cultural atualizado!');
+      } else {
+        console.log('--- [DEBUG] Inserindo Novo Giro Cultural ---');
+        const { data: saved, error } = await supabase.from('cultural_items').insert([data]).select();
+        if (error) {
+          console.error('--- [DEBUG] Erro ao salvar:', error);
+          showError('Erro ao salvar Giro Cultural: ' + error.message);
+          return;
+        }
+        if (saved) {
+          console.log('--- [DEBUG] Salvo com sucesso! id:', saved[0].id);
+          setCulturalItems((prev: CulturalItem[]) => [...prev, saved[0]]);
+        }
+        showSuccess('Giro Cultural registrado com sucesso!');
+      }
+      setShowCulturalModal(false);
+      setEditingCulturalItem(null);
+      setUploadedImages([]);
+    } catch (err: any) {
+      console.error('--- [DEBUG] Erro inesperado no handleSaveCulturalItem:', err);
+      showError('Erro inesperado: ' + err.message);
+    }
   };
 
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
