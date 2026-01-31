@@ -136,102 +136,83 @@ export default function App() {
       console.log('--- [DEBUG] Início do fetchData ---');
       setIsLoading(true);
 
-      const timeoutId = setTimeout(() => {
-        if (isMounted) {
-          console.warn('--- [DEBUG] fetchData excedeu o tempo limite (15s) ---');
-          setIsLoading(false);
-          showError("O servidor está demorando muito para responder. Verifique sua conexão.");
+      const fetchWithTimeout = async (promise: PromiseLike<any>, timeoutMs: number = 8000) => {
+        let timeoutId: any;
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs);
+        });
+        try {
+          const result = await Promise.race([promise, timeoutPromise]);
+          clearTimeout(timeoutId);
+          return result;
+        } catch (error) {
+          clearTimeout(timeoutId);
+          throw error;
         }
-      }, 15000);
+      };
 
       try {
-        // Verificar se as chaves do Supabase estão configuradas
         const rawUrl = import.meta.env.VITE_SUPABASE_URL;
         const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         const isPlaceholder = !rawUrl || rawUrl.includes('placeholder');
 
-        console.log('--- [DEBUG] Verificando Config do Banco ---');
-        console.log('URL definida:', !!rawUrl);
-        console.log('Key definida:', !!rawKey);
-
         if (isPlaceholder) {
-          console.error('--- [DEBUG] ERRO: Segredos não encontrados ---');
           showError("ERRO: Segredos do banco não encontrados na Vercel (VITE_...).");
           setConnectionError(true);
-          clearTimeout(timeoutId);
           setIsLoading(false);
           return;
         }
 
-        console.log('--- [DEBUG] Iniciando busca sequencial de dados ---');
-
-        // Chamar as tabelas uma por uma para saber qual trava
-        console.log('--- [DEBUG] TESTE: Raw Fetch para Lojas ---');
-        try {
-          const rawFetchStart = Date.now();
-          const rawRes = await fetch(`${rawUrl}/rest/v1/stores?select=*`, {
-            headers: {
-              'apikey': rawKey,
-              'Authorization': `Bearer ${rawKey}`
-            }
-          });
-          const rawFetchEnd = Date.now();
-          console.log(`--- [DEBUG] Raw Fetch status: ${rawRes.status} (${rawFetchEnd - rawFetchStart}ms) ---`);
-          if (!rawRes.ok) {
-            const errText = await rawRes.text();
-            console.error('--- [DEBUG] Raw Fetch Error Detail:', errText);
-          }
-        } catch (rawErr) {
-          console.error('--- [DEBUG] Raw Fetch Exception:', rawErr);
-        }
-
         console.log('--- [DEBUG] Buscando lojas... ---');
-        const { data: storesData, error: storesError } = await supabase.from('stores').select('*');
-        if (storesError) {
-          console.error('Erro lojas:', storesError);
-          showError(`Erro ao carregar lojas: ${storesError.message}`);
-          setConnectionError(true);
-        } else {
+        try {
+          const { data: storesData, error: storesError } = await fetchWithTimeout(supabase.from('stores').select('*').then(r => r));
+          if (storesError) throw storesError;
           console.log(`--- [DEBUG] Lojas OK: ${storesData?.length || 0} ---`);
           setConnectionError(false);
           if (storesData) {
             setStores(storesData.map((s: any) => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
           }
+        } catch (err: any) {
+          console.error('Erro lojas:', err);
+          if (err.message === 'TIMEOUT') showError("Tempo limite excedido ao buscar lojas.");
+          else showError(`Erro ao carregar lojas: ${err.message}`);
+          setConnectionError(true);
         }
 
         console.log('--- [DEBUG] Buscando produtos... ---');
-        const { data: productsData, error: productsError } = await supabase.from('products').select('*');
-        if (productsError) {
-          console.error('Erro produtos:', productsError);
-          showError(`Erro ao carregar produtos: ${productsError.message}`);
-        } else if (productsData) {
+        try {
+          const { data: productsData, error: productsError } = await fetchWithTimeout(supabase.from('products').select('*').then(r => r));
+          if (productsError) throw productsError;
           console.log(`--- [DEBUG] Produtos OK: ${productsData.length} ---`);
           setProducts(productsData.map((p: any) => ({ ...p, storeId: p.store_id })));
+        } catch (err: any) {
+          console.error('Erro produtos:', err);
         }
 
         console.log('--- [DEBUG] Buscando serviços... ---');
-        const { data: servicesData, error: servicesError } = await supabase.from('services').select('*');
-        if (servicesError) {
-          console.error('Erro serviços:', servicesError);
-        } else if (servicesData) {
+        try {
+          const { data: servicesData, error: servicesError } = await fetchWithTimeout(supabase.from('services').select('*').then(r => r));
+          if (servicesError) throw servicesError;
           console.log(`--- [DEBUG] Serviços OK: ${servicesData.length} ---`);
           setServices(servicesData.map((s: any) => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate })));
+        } catch (err: any) {
+          console.error('Erro serviços:', err);
         }
 
         console.log('--- [DEBUG] Buscando cultural... ---');
-        const { data: culturalData, error: culturalError } = await supabase.from('cultural_items').select('*');
-        if (culturalError) {
-          console.error('Erro cultural:', culturalError);
-        } else if (culturalData) {
+        try {
+          const { data: culturalData, error: culturalError } = await fetchWithTimeout(supabase.from('cultural_items').select('*').then(r => r));
+          if (culturalError) throw culturalError;
           console.log(`--- [DEBUG] Cultural OK: ${culturalData.length} ---`);
           setCulturalItems(culturalData);
+        } catch (err: any) {
+          console.error('Erro cultural:', err);
         }
 
         console.log('--- [DEBUG] Buscando pedidos... ---');
-        const { data: ordersData, error: ordersError } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-        if (ordersError) {
-          console.error('Erro pedidos:', ordersError);
-        } else if (ordersData) {
+        try {
+          const { data: ordersData, error: ordersError } = await fetchWithTimeout(supabase.from('orders').select('*').order('created_at', { ascending: false }).then(r => r));
+          if (ordersError) throw ordersError;
           console.log(`--- [DEBUG] Pedidos OK: ${ordersData.length} ---`);
           setOrders(ordersData.map((o: any) => ({
             ...o,
@@ -245,12 +226,13 @@ export default function App() {
             dispatchedAt: o.dispatched_at,
             createdAt: o.created_at
           })));
+        } catch (err: any) {
+          console.error('Erro pedidos:', err);
         }
 
-        // Fetch Store Ratings (Não deve travar se falhar)
         try {
           console.log('--- [DEBUG] Buscando avaliações ---');
-          const { data: ratingsData, error: ratingsError } = await supabase.from('store_ratings').select('*');
+          const { data: ratingsData, error: ratingsError } = await fetchWithTimeout(supabase.from('store_ratings').select('*').then(r => r));
           if (ratingsError) throw ratingsError;
           if (ratingsData) {
             console.log(`--- [DEBUG] Avaliações carregadas: ${ratingsData.length} ---`);
@@ -268,19 +250,14 @@ export default function App() {
 
       } catch (err: any) {
         if (isMounted) {
-          const isAbort = err?.name === 'AbortError' || err?.message?.includes('AbortError');
-          if (!isAbort) {
-            console.error("Fetch fatal error:", err);
-            showError(`Erro fatal de conexão: ${err.message || 'Verifique o console'}`);
-            setConnectionError(true);
-          } else {
-            console.log('--- fetchData abortado (React mount/unmount) ---');
-          }
+          console.error("Fetch fatal error:", err);
+          showError(`Erro inesperado: ${err.message}`);
         }
       } finally {
-        console.log('--- [DEBUG] Finalizando fetchData ---');
-        clearTimeout(timeoutId);
-        setIsLoading(false); // Sempre resetar isLoading para evitar tela travada
+        if (isMounted) {
+          console.log('--- [DEBUG] Finalizando fetchData ---');
+          setIsLoading(false);
+        }
       }
     };
 
