@@ -76,7 +76,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                                         <span className="font-black text-green-600">R$ {(item.price * item.quantity).toFixed(2)}</span>
                                     </div>
                                 </div>
-                                <button onClick={() => onRemoveFromCart(item.productId)} className="absolute top-0 right-0 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
+                                <button onClick={() => onRemoveFromCart(item.productId)} className="absolute top-0 right-0 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all z-10 cursor-pointer">
                                     <Trash2 size={18} />
                                 </button>
                             </div>

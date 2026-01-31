@@ -174,10 +174,12 @@ function App() {
 
       <Header
         activeTab={activeTab}
-        setActiveTab={handleHeaderNavigate}
+        onTabChange={handleHeaderNavigate}
         user={currentUser}
         cartCount={cart.reduce((a, b) => a + b.quantity, 0)}
-        onAuthClick={() => setShowAuthModal(true)}
+        onAuth={(mode) => setShowAuthModal(true)}
+        onLogout={logout}
+        connectionError={data.connectionError}
       />
 
       <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 pt-28">

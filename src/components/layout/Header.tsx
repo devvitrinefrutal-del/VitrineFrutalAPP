@@ -17,8 +17,8 @@ const HeaderNavButton = ({ active, onClick, icon, label }: { active: boolean, on
     <button
         onClick={onClick}
         className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${active
-                ? 'bg-orange-50 text-orange-600 font-bold'
-                : 'text-gray-500 hover:bg-gray-50 font-medium'
+            ? 'bg-orange-50 text-orange-600 font-bold'
+            : 'text-gray-500 hover:bg-gray-50 font-medium'
             }`}
     >
         {icon}
@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
             )}
 
-            <header className="glass-effect sticky top-0 z-50 px-4 md:px-8 py-3 flex justify-between items-center border-b border-gray-100 bg-white/80 backdrop-blur-md">
+            <header className="glass-effect sticky top-0 z-[100] px-4 md:px-8 py-3 flex justify-between items-center border-b border-gray-100 bg-white/80 backdrop-blur-md">
                 <div className="flex items-center gap-8">
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => onTabChange('VITRINE')}>
                         <Logo />
@@ -86,8 +86,8 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                         onClick={() => onTabChange('CHECKOUT')}
                         className={`relative p-2.5 mr-1 sm:mr-2 bg-white border rounded-xl transition-all ${activeTab === 'CHECKOUT'
-                                ? 'border-orange-500 text-orange-500 shadow-lg shadow-orange-50'
-                                : 'border-gray-100 text-gray-600 hover:bg-gray-50'
+                            ? 'border-orange-500 text-orange-500 shadow-lg shadow-orange-50'
+                            : 'border-gray-100 text-gray-600 hover:bg-gray-50'
                             }`}
                     >
                         <ShoppingCart size={20} />
@@ -103,8 +103,8 @@ export const Header: React.FC<HeaderProps> = ({
                             <button
                                 onClick={() => onTabChange('DASHBOARD')}
                                 className={`flex items-center gap-2 p-2 px-3 rounded-xl transition-colors ${activeTab === 'DASHBOARD'
-                                        ? 'bg-green-100 text-green-700 font-bold'
-                                        : 'text-gray-500 hover:bg-gray-100'
+                                    ? 'bg-green-100 text-green-700 font-bold'
+                                    : 'text-gray-500 hover:bg-gray-100'
                                     }`}
                             >
                                 <UserIcon size={20} />

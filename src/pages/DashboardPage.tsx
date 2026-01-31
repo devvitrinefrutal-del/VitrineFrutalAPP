@@ -133,6 +133,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     {user.role === 'DEV' && (
                         <>
                             <NavBtn active={section === 'OVERVIEW'} icon={<LayoutDashboard size={20} />} label="Admin Geral" onClick={() => setSection('OVERVIEW')} />
+                            <NavBtn active={section === 'STORES'} icon={<StoreIcon size={20} />} label="Lojas" onClick={() => setSection('STORES')} />
+                            <NavBtn active={section === 'SERVICES'} icon={<Package size={20} />} label="Serviços" onClick={() => setSection('SERVICES')} />
                             <NavBtn active={section === 'CULTURAL'} icon={<Calendar size={20} />} label="Giro Cultural" onClick={() => setSection('CULTURAL')} />
                         </>
                     )}
@@ -145,6 +147,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
             {/* Main Content Area */}
             <div className="flex-1 space-y-6">
+
+                {/* DEV: OVERVIEW */}
+                {user.role === 'DEV' && section === 'OVERVIEW' && (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
+                            <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Total Lojas</h4>
+                            <p className="text-3xl font-black text-black">{stores.length}</p>
+                        </div>
+                        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
+                            <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Total Produtos</h4>
+                            <p className="text-3xl font-black text-black">{products.length}</p>
+                        </div>
+                        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
+                            <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Total Serviços</h4>
+                            <p className="text-3xl font-black text-black">{services.length}</p>
+                        </div>
+                        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
+                            <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2">Total Pedidos</h4>
+                            <p className="text-3xl font-black text-black">{orders.length}</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* LOJISTA: OVERVIEW */}
                 {user.role === 'LOJISTA' && section === 'OVERVIEW' && (
@@ -266,7 +290,33 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     </div>
                 )}
 
-                {/* PRESTADOR: SERVICES */}
+                {/* DEV: STORES */}
+                {user.role === 'DEV' && section === 'STORES' && (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm">
+                            <h3 className="text-xl font-black text-black tracking-tight uppercase tracking-widest text-xs">Gerenciar Lojas</h3>
+                            <button onClick={() => { setEditingStore(null); setModalImages([]); setShowStoreModal(true); }} className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 shadow-lg hover:bg-orange-600 transition-all uppercase tracking-[0.2em]">
+                                <Plus size={16} /> Nova Loja
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {stores.map(s => (
+                                <div key={s.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex gap-6 items-center">
+                                    <img src={s.image} className="w-20 h-20 rounded-2xl object-cover" />
+                                    <div className="flex-1">
+                                        <h4 className="font-black text-black uppercase tracking-tight text-sm">{s.name}</h4>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">{s.category}</p>
+                                        <button onClick={() => { setEditingStore(s); setModalImages(s.image ? [s.image] : []); setShowStoreModal(true); }} className="text-orange-600 text-[10px] font-black uppercase tracking-widest hover:underline flex items-center gap-1">
+                                            <Edit2 size={12} /> Editar
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* PRESTADOR/DEV: SERVICES */}
                 {(user.role === 'PRESTADOR' || user.role === 'DEV') && section === 'SERVICES' && (
                     <div className="space-y-6">
                         <div className="flex justify-between items-center bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm">
