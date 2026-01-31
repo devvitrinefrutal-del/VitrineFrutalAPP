@@ -791,6 +791,7 @@ export default function App() {
             <span className="font-bold text-xl tracking-tight text-gray-800 hidden sm:inline uppercase">
               Vitrine<span className="text-orange-500">Frutal</span>
             </span>
+            <div className={`w-2 h-2 rounded-full ${connectionError ? 'bg-red-500 animate-pulse' : 'bg-green-500'} ml-1`} title={connectionError ? 'Sem conexão com banco' : 'Conectado ao Supabase'}></div>
           </div>
           <nav className="hidden md:flex items-center gap-1">
             <HeaderNavButton active={activeTab === 'VITRINE'} onClick={() => handleTabChange('VITRINE')} icon={<ShoppingBag size={18} />} label="Vitrine" />
