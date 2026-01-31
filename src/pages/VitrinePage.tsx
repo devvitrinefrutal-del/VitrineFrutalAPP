@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Filter, Star, MapPin, ChevronRight } from 'lucide-react';
-import { Store, Product, StoreRating } from '../types';
+import { Store, Product, StoreRating } from '../../types';
 import { Logo } from '../components/ui/Logo';
 import { ProductCard } from '../components/business/ProductCard';
 import { StoreCard } from '../components/business/StoreCard';

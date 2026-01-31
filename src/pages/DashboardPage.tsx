@@ -4,7 +4,7 @@ import {
     User as UserIcon, Plus, Edit2, Trash2, Calendar, MapPin, DollarSign, Image as ImageIcon,
     CheckCircle, X
 } from 'lucide-react';
-import { User, Store, Product, Service, CulturalItem, Order } from '../types';
+import { User, Store, Product, Service, CulturalItem, Order } from '../../types';
 import { OrderManager } from '../components/business/OrderManager';
 import { ProductModal } from '../components/modals/ProductModal';
 import { Modal } from '../components/ui/Modal';

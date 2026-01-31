@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
-import { CulturalItem } from '../types';
+import { CulturalItem } from '../../types';
 
 interface CulturalPageProps {
     items: CulturalItem[];

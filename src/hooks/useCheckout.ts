@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { supabase } from '../supabaseClient';
+import React, { useState } from 'react';
+import { supabase } from '../../supabaseClient';
 import { CartItem } from './useCart';
-import { User, Order, Product } from '../types';
+import { User, Order, Product } from '../../types';
 
 export function useCheckout(
     cart: CartItem[],
@@ -15,15 +15,23 @@ export function useCheckout(
     const [isFinishing, setIsFinishing] = useState(false);
     const [showOrderSuccess, setShowOrderSuccess] = useState(false);
 
-    const handleFinalizePurchase = async (
-        deliveryMethod: 'ENTREGA' | 'RETIRADA',
-        customerAddress: string,
-        deliveryFee: number,
-        observation: string,
-        paymentMethod: string,
-        changeFor?: string,
-        storeId: string
-    ) => {
+    const handleFinalizePurchase = async ({
+        deliveryMethod,
+        customerAddress,
+        deliveryFee,
+        observation,
+        paymentMethod,
+        storeId,
+        changeFor
+    }: {
+        deliveryMethod: 'ENTREGA' | 'RETIRADA';
+        customerAddress: string;
+        deliveryFee: number;
+        observation: string;
+        paymentMethod: string;
+        storeId: string;
+        changeFor?: string;
+    }) => {
         if (!user) {
             showError('Faça login para finalizar o pedido.');
             return false;

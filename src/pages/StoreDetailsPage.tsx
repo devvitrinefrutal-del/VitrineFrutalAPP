@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Star, Store as StoreIcon } from 'lucide-react';
-import { Store, Product, StoreRating } from '../types';
+import { Store, Product, StoreRating } from '../../types';
 import { ProductCard } from '../components/business/ProductCard';
 
 interface StoreDetailsPageProps {

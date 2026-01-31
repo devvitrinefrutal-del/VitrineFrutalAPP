@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
-import { User, UserRole } from '../types';
+import { supabase } from '../../supabaseClient';
+import { User, UserRole } from '../../types';
 
 export function useAuth(showSuccess: (msg: string) => void, showError: (msg: string) => void) {
     const [currentUser, setCurrentUser] = useState<User | null>(null);

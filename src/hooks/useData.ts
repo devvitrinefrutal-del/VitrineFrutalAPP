@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
-import { Store, Product, Service, CulturalItem, Order, StoreRating } from '../types';
+import { supabase } from '../../supabaseClient';
+import { Store, Product, Service, CulturalItem, Order, StoreRating } from '../../types';
 
 export function useData(showError: (msg: string) => void) {
     const [stores, setStores] = useState<Store[]>([]);
@@ -32,7 +32,6 @@ export function useData(showError: (msg: string) => void) {
             const { data: ratingsData } = await supabase.from('store_ratings').select('*');
             if (ratingsData) setStoreRatings(ratingsData.map(r => ({ ...r, storeId: r.store_id, orderId: r.order_id, clientId: r.client_id, createdAt: r.created_at })));
 
-            // Orders fetch might be restricted by RLS, so this might return empty for non-auth users, which is fine
             const { data: ordersData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
             if (ordersData) {
                 setOrders(ordersData.map(o => ({
@@ -61,8 +60,6 @@ export function useData(showError: (msg: string) => void) {
 
     useEffect(() => {
         fetchData();
-
-        // Auto-refresh mechanism or realtime subscription could go here
         const handleOnline = () => { setConnectionError(false); fetchData(); };
         window.addEventListener('online', handleOnline);
         return () => window.removeEventListener('online', handleOnline);
@@ -74,12 +71,13 @@ export function useData(showError: (msg: string) => void) {
         services,
         culturalItems,
         orders,
-        storeRatings,
-        isLoading,
+        ratings: storeRatings,
+        loading: isLoading,
         connectionError,
         setStores,
         setProducts,
         setServices,
+        setCulturalItems,
         setOrders,
         setStoreRatings,
         refreshData: fetchData

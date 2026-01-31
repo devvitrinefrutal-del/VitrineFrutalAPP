@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Trash2, MapPin, Truck, Building2, DollarSign, CreditCard, ShoppingBag, Send } from 'lucide-react';
-import { User, Store } from '../types';
+import { User, Store } from '../../types';
 import { CartItem } from '../hooks/useCart';
 
 interface CheckoutPageProps {

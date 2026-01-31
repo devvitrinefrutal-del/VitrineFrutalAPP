@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Product, Store } from '../types';
+import { useState, useEffect } from 'react';
+import { Product } from '../../types';
 
 export interface CartItem {
     productId: string;
@@ -10,10 +10,17 @@ export interface CartItem {
     storeId: string;
 }
 
-export function useCart(stores: Store[]) {
-    const [cart, setCart] = useState<CartItem[]>([]);
+export function useCart() {
+    const [cart, setCart] = useState<CartItem[]>(() => {
+        const saved = localStorage.getItem('vitrine_cart');
+        return saved ? JSON.parse(saved) : [];
+    });
 
-    const addToCart = (product: Product, showSuccess: (msg: string) => void) => {
+    useEffect(() => {
+        localStorage.setItem('vitrine_cart', JSON.stringify(cart));
+    }, [cart]);
+
+    const addToCart = (product: Product) => {
         setCart(prev => {
             const existing = prev.find(item => item.productId === product.id);
             if (existing) {
@@ -30,7 +37,6 @@ export function useCart(stores: Store[]) {
                 storeId: product.storeId
             }];
         });
-        showSuccess(`${product.name} no carrinho!`);
     };
 
     const updateQuantity = (productId: string, delta: number) => {
@@ -43,23 +49,15 @@ export function useCart(stores: Store[]) {
         }));
     };
 
-    const removeFromCart = (productId: string, showSuccess: (msg: string) => void) => {
+    const removeFromCart = (productId: string) => {
         setCart(prev => prev.filter(item => item.productId !== productId));
-        showSuccess('Removido do carrinho.');
     };
 
-    const clearCart = (showSuccess?: (msg: string) => void) => {
+    const clearCart = () => {
         setCart([]);
-        if (showSuccess) showSuccess('Carrinho esvaziado.');
     };
 
-    const cartItemsTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const cartStoreId = cart.length > 0 ? cart[0].storeId : null;
-    const currentCheckoutStore = stores.find(s => s.id === cartStoreId);
-
-    const getDeliveryFee = (method: 'ENTREGA' | 'RETIRADA') => {
-        return (method === 'ENTREGA' && currentCheckoutStore) ? (currentCheckoutStore.deliveryFee || 0) : 0;
-    };
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     return {
         cart,
@@ -67,9 +65,6 @@ export function useCart(stores: Store[]) {
         updateQuantity,
         removeFromCart,
         clearCart,
-        cartItemsTotal,
-        cartStoreId,
-        currentCheckoutStore,
-        getDeliveryFee
+        total
     };
 }

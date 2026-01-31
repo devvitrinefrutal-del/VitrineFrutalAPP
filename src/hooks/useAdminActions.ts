@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { supabase } from '../supabaseClient';
-import { User, Store, Product, Service, CulturalItem, Order, UserRole } from '../types';
+import React, { useState } from 'react';
+import { supabase } from '../../supabaseClient';
+import { User, Store, Product, Service, CulturalItem, Order } from '../../types';
 
 interface InternalSetters {
     setStores: React.Dispatch<React.SetStateAction<Store[]>>;

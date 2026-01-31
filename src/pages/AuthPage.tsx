@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserCircle, ShieldCheck, User as UserIcon, Eye, EyeOff, CheckCircle2, Plus, Store as StoreIcon } from 'lucide-react';
-import { UserRole } from '../types';
+import { User, UserRole } from '../../types';
 
 interface AuthPageProps {
     onLogin: (formData: FormData) => void;

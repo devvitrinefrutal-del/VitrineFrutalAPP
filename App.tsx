@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { User, Store, Service, CulturalItem, Product, StoreRating } from './types';
-import { useToast } from './hooks/useToast';
-import { useAuth } from './hooks/useAuth';
-import { useData } from './hooks/useData';
-import { useCart } from './hooks/useCart';
-import { useAdminActions } from './hooks/useAdminActions';
-import { useCheckout } from './hooks/useCheckout';
+import { useToast } from './src/hooks/useToast';
+import { useAuth } from './src/hooks/useAuth';
+import { useData } from './src/hooks/useData';
+import { useCart } from './src/hooks/useCart';
+import { useAdminActions } from './src/hooks/useAdminActions';
+import { useCheckout } from './src/hooks/useCheckout';
 
 // Components
-import { Toast } from './components/ui/Toast';
-import { Header } from './components/layout/Header';
+import { Toast } from './src/components/ui/Toast';
+import { Header } from './src/components/layout/Header';
 import { PartyPopper, CheckCircle } from 'lucide-react';
 
 // Pages
-import { VitrinePage } from './pages/VitrinePage';
-import { StoreDetailsPage } from './pages/StoreDetailsPage';
-import { ServicesPage } from './pages/ServicesPage';
-import { CulturalPage } from './pages/CulturalPage';
-import { CulturalDetailPage } from './pages/CulturalDetailPage';
-import { CheckoutPage } from './pages/CheckoutPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { AuthPage } from './pages/AuthPage';
+import { VitrinePage } from './src/pages/VitrinePage';
+import { StoreDetailsPage } from './src/pages/StoreDetailsPage';
+import { ServicesPage } from './src/pages/ServicesPage';
+import { CulturalPage } from './src/pages/CulturalPage';
+import { CulturalDetailPage } from './src/pages/CulturalDetailPage';
+import { CheckoutPage } from './src/pages/CheckoutPage';
+import { DashboardPage } from './src/pages/DashboardPage';
+import { AuthPage } from './src/pages/AuthPage';
 
 // --- Route Wrappers ---
 
