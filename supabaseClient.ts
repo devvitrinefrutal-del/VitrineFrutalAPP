@@ -1,22 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 
-export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Supabase URL ou Anon Key não encontradas! Verifique o arquivo .env ou as variáveis da Vercel.');
-} else {
-    console.log('--- [DEBUG] Supabase Client Inicializado ---');
+    throw new Error(
+        'ERRO FATAL: Variáveis de ambiente do Supabase (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY) não foram encontradas. Verifique seu arquivo .env ou as configurações da Vercel.'
+    );
 }
 
-// Evitar crash se as chaves estiverem vazias
-export const supabase = createClient(
-    supabaseUrl || 'https://placeholder.supabase.co',
-    supabaseAnonKey || 'placeholder',
-    {
-        auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-        }
-    }
-);
+console.log('--- [SISTEMA] Conectando ao Supabase... ---');
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+    },
+});
+
