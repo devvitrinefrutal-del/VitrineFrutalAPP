@@ -7,6 +7,7 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cultural_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.store_ratings ENABLE ROW LEVEL SECURITY;
 
 -- 2. LIMPEZA TOTAL DE POLÍTICAS ANTIGAS (Garantir que não haja duplicidade)
 DO $$ 
@@ -53,6 +54,7 @@ CREATE POLICY "Store Update Order Status" ON public.orders FOR UPDATE TO authent
 -- Avaliações: Clientes criam, todos podem ler, ninguém pode editar/deletar
 CREATE POLICY "Client Insert Rating" ON public.store_ratings FOR INSERT TO authenticated WITH CHECK (auth.uid() = client_id);
 CREATE POLICY "Public Read Ratings" ON public.store_ratings FOR SELECT USING (true);
+CREATE POLICY "Dev Full Access Ratings" ON public.store_ratings FOR ALL TO authenticated USING (auth.jwt() ->> 'email' = 'devvitrinefrutal@gmail.com') WITH CHECK (auth.jwt() ->> 'email' = 'devvitrinefrutal@gmail.com');
 
 -- 6. ÍNDICES DE PERFORMANCE
 CREATE INDEX IF NOT EXISTS idx_stores_owner_id ON public.stores(owner_id);

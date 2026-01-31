@@ -133,10 +133,15 @@ export default function App() {
     let isMounted = true;
 
     const fetchData = async () => {
+      console.log('--- [DEBUG] Início do fetchData ---');
       setIsLoading(true);
 
       const timeoutId = setTimeout(() => {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          console.warn('--- [DEBUG] fetchData excedeu o tempo limite (15s) ---');
+          setIsLoading(false);
+          showError("O servidor está demorando muito para responder. Verifique sua conexão.");
+        }
       }, 15000);
 
       try {
@@ -145,7 +150,12 @@ export default function App() {
         const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         const isPlaceholder = !rawUrl || rawUrl.includes('placeholder');
 
+        console.log('--- [DEBUG] Verificando Config do Banco ---');
+        console.log('URL definida:', !!rawUrl);
+        console.log('Key definida:', !!rawKey);
+
         if (isPlaceholder) {
+          console.error('--- [DEBUG] ERRO: Segredos não encontrados ---');
           showError("ERRO: Segredos do banco não encontrados na Vercel (VITE_...).");
           setConnectionError(true);
           clearTimeout(timeoutId);
@@ -153,6 +163,7 @@ export default function App() {
           return;
         }
 
+        console.log('--- [DEBUG] Iniciando Promise.all para dados core ---');
         // Parallel fetch for core data
         const [
           { data: storesData, error: storesError },
@@ -168,35 +179,39 @@ export default function App() {
           supabase.from('orders').select('*').order('created_at', { ascending: false })
         ]);
 
-        if (storesError) console.error('Erro lojas:', storesError);
-        if (productsError) console.error('Erro produtos:', productsError);
-        if (servicesError) console.error('Erro serviços:', servicesError);
-        if (culturalError) console.error('Erro cultural:', culturalError);
+        console.log('--- [DEBUG] Resultados do fetch recebidos ---');
 
         if (storesError) {
+          console.error('Erro lojas:', storesError);
+          showError(`Erro ao carregar lojas: ${storesError.message}`);
           setConnectionError(true);
         } else {
+          console.log(`--- [DEBUG] Lojas carregadas: ${storesData?.length || 0} ---`);
           setConnectionError(false);
+          if (storesData) {
+            setStores(storesData.map((s: any) => ({
+              ...s,
+              ownerId: s.owner_id,
+              deliveryFee: s.delivery_fee
+            })));
+          }
         }
 
-
-
-        if (storesData) {
-          setStores(storesData.map((s: any) => ({
-            ...s,
-            ownerId: s.owner_id,
-            deliveryFee: s.delivery_fee
-          })));
-        }
-
-        if (productsData) {
+        if (productsError) {
+          console.error('Erro produtos:', productsError);
+          showError(`Erro ao carregar produtos: ${productsError.message}`);
+        } else if (productsData) {
+          console.log(`--- [DEBUG] Produtos carregados: ${productsData.length} ---`);
           setProducts(productsData.map((p: any) => ({
             ...p,
             storeId: p.store_id
           })));
         }
 
-        if (servicesData) {
+        if (servicesError) {
+          console.error('Erro serviços:', servicesError);
+        } else if (servicesData) {
+          console.log(`--- [DEBUG] Serviços carregados: ${servicesData.length} ---`);
           setServices(servicesData.map((s: any) => ({
             ...s,
             providerId: s.provider_id,
@@ -204,11 +219,17 @@ export default function App() {
           })));
         }
 
-        if (culturalData) {
+        if (culturalError) {
+          console.error('Erro cultural:', culturalError);
+        } else if (culturalData) {
+          console.log(`--- [DEBUG] Giro cultural carregado: ${culturalData.length} ---`);
           setCulturalItems(culturalData);
         }
 
-        if (ordersData) {
+        if (ordersError) {
+          console.error('Erro pedidos:', ordersError);
+        } else if (ordersData) {
+          console.log(`--- [DEBUG] Pedidos carregados: ${ordersData.length} ---`);
           setOrders(ordersData.map((o: any) => ({
             ...o,
             storeId: o.store_id,
@@ -225,8 +246,11 @@ export default function App() {
 
         // Fetch Store Ratings (Não deve travar se falhar)
         try {
-          const { data: ratingsData } = await supabase.from('store_ratings').select('*');
+          console.log('--- [DEBUG] Buscando avaliações ---');
+          const { data: ratingsData, error: ratingsError } = await supabase.from('store_ratings').select('*');
+          if (ratingsError) throw ratingsError;
           if (ratingsData) {
+            console.log(`--- [DEBUG] Avaliações carregadas: ${ratingsData.length} ---`);
             setStoreRatings(ratingsData.map((r: any) => ({
               ...r,
               storeId: r.store_id,
@@ -244,12 +268,14 @@ export default function App() {
           const isAbort = err?.name === 'AbortError' || err?.message?.includes('AbortError');
           if (!isAbort) {
             console.error("Fetch fatal error:", err);
+            showError(`Erro fatal de conexão: ${err.message || 'Verifique o console'}`);
             setConnectionError(true);
           } else {
             console.log('--- fetchData abortado (React mount/unmount) ---');
           }
         }
       } finally {
+        console.log('--- [DEBUG] Finalizando fetchData ---');
         clearTimeout(timeoutId);
         setIsLoading(false); // Sempre resetar isLoading para evitar tela travada
       }
@@ -579,17 +605,21 @@ export default function App() {
         }
 
         if (profile) {
+          console.log('--- [DEBUG] Perfil encontrado:', profile.role, '---');
           if (profile.role === 'DEV' && !isAuthorizedDev) {
+            console.error('--- [DEBUG] Acesso Negado: Usuário não é DEV autorizado ---');
             showError('Acesso Negado: Este e-mail não é autorizado como Desenvolvedor.');
             await supabase.auth.signOut();
             return;
           }
 
           // AUTO-LINK & AUTO-UPGRADE: Verificar se o email dele agora está em uma loja/serviço master sem dono
+          console.log('--- [DEBUG] Verificando vínculos de loja/serviço ---');
           const { data: storeMatch } = await supabase.from('stores').select('id, owner_id').eq('email', email).maybeSingle();
           const { data: serviceMatch } = await supabase.from('services').select('id, provider_id').eq('email', email).maybeSingle();
 
           if (storeMatch && !storeMatch.owner_id) {
+            console.log('--- [DEBUG] Vinculando Loja Master ---');
             // Se encontrou loja e não tem dono, vincula e garante cargo LOJISTA
             await supabase.from('profiles').update({ role: 'LOJISTA' }).eq('id', profile.id);
             await supabase.from('stores').update({ owner_id: profile.id }).eq('id', storeMatch.id);
@@ -598,6 +628,7 @@ export default function App() {
             setStores(prev => prev.map(s => s.id === storeMatch.id ? { ...s, ownerId: profile.id } : s));
             showSuccess('Sua loja foi vinculada com sucesso!');
           } else if (serviceMatch && !serviceMatch.provider_id) {
+            console.log('--- [DEBUG] Vinculando Serviço Master ---');
             // Se encontrou serviço e não tem dono, vincula e garante cargo PRESTADOR
             await supabase.from('profiles').update({ role: 'PRESTADOR' }).eq('id', profile.id);
             await supabase.from('services').update({ provider_id: profile.id }).eq('id', serviceMatch.id);
@@ -612,8 +643,10 @@ export default function App() {
             profile.serviceId = serviceMatch.id;
           }
 
+          console.log('--- [DEBUG] Login concluído com sucesso ---');
           setCurrentUser(profile);
         } else {
+          console.log('--- [DEBUG] Perfil não encontrado, criando CLIENTE ---');
           // Se o login funcionou mas não tem perfil, cria um perfil básico de CLIENTE
           const newUser: User = {
             id: data.user.id,
@@ -626,9 +659,11 @@ export default function App() {
           };
           const { error: insertError } = await supabase.from('profiles').insert([newUser]);
           if (insertError) {
+            console.error('--- [DEBUG] Erro ao criar perfil CLIENTE:', insertError, '---');
             showError(`Erro ao criar perfil: ${insertError.message}`);
             await supabase.auth.signOut();
           } else {
+            console.log('--- [DEBUG] Novo perfil CLIENTE criado com sucesso ---');
             setCurrentUser(newUser);
             showSuccess('Login realizado (novo perfil criado)');
           }
