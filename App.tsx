@@ -234,6 +234,7 @@ function App() {
                 store={cart.length > 0 ? data.stores.find(s => s.id === cart[0].storeId) || null : null}
                 onUpdateQuantity={updateQuantity}
                 onRemoveFromCart={removeFromCart}
+                onClearCart={clearCart}
                 onBack={() => navigate('/')}
                 onFinalize={handleFinalizePurchase as any}
                 isFinishing={isFinishing}

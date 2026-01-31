@@ -9,6 +9,7 @@ interface CheckoutPageProps {
     store: Store | null;
     onUpdateQuantity: (productId: string, delta: number) => void;
     onRemoveFromCart: (productId: string) => void;
+    onClearCart: () => void;
     onBack: () => void;
     onFinalize: (data: any) => Promise<boolean>;
     isFinishing: boolean;
@@ -20,6 +21,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     store,
     onUpdateQuantity,
     onRemoveFromCart,
+    onClearCart,
     onBack,
     onFinalize,
     isFinishing
@@ -59,6 +61,18 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 {/* Cart Items List */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
+                        <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                            <h3 className="font-black text-lg uppercase tracking-widest flex items-center gap-2">
+                                <ShoppingBag size={20} className="text-orange-500" /> Itens
+                            </h3>
+                            <button
+                                onClick={() => { if (confirm('Esvaziar toda a sacola?')) onClearCart(); }}
+                                className="text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 px-3 py-1 rounded-lg transition-colors flex items-center gap-1"
+                            >
+                                <Trash2 size={14} /> Limpar Sacola
+                            </button>
+                        </div>
+
                         {cart.map((item) => (
                             <div key={item.productId} className="flex gap-6 border-b border-gray-100 pb-6 mb-6 last:mb-0 last:pb-0 last:border-0 relative">
                                 <img src={item.image} className="w-24 h-24 rounded-2xl object-cover" />
@@ -76,7 +90,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                                         <span className="font-black text-green-600">R$ {(item.price * item.quantity).toFixed(2)}</span>
                                     </div>
                                 </div>
-                                <button onClick={() => onRemoveFromCart(item.productId)} className="absolute top-0 right-0 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all z-10 cursor-pointer">
+                                <button onClick={() => onRemoveFromCart(item.productId)} className="absolute top-0 right-0 p-2 text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-all z-10 cursor-pointer shadow-sm">
                                     <Trash2 size={18} />
                                 </button>
                             </div>
