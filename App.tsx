@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { User, Store, Service, CulturalItem, Product } from './types';
+import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
+import { User, Store, Service, CulturalItem, Product, StoreRating } from './types';
 import { useToast } from './hooks/useToast';
 import { useAuth } from './hooks/useAuth';
 import { useData } from './hooks/useData';
@@ -22,7 +23,63 @@ import { CheckoutPage } from './pages/CheckoutPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AuthPage } from './pages/AuthPage';
 
+// --- Route Wrappers ---
+
+const StoreDetailsRoute = ({
+  stores,
+  products,
+  allRatings,
+  onAddToCart
+}: {
+  stores: Store[],
+  products: Product[],
+  allRatings: StoreRating[],
+  onAddToCart: (p: Product) => void
+}) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const store = stores.find(s => s.id === id);
+
+  if (!store && stores.length > 0) return <Navigate to="/" replace />;
+  if (!store) return null;
+
+  return (
+    <StoreDetailsPage
+      store={store}
+      products={products.filter(p => p.storeId === store.id)}
+      allRatings={allRatings}
+      onBack={() => navigate('/')}
+      onAddToCart={onAddToCart}
+    />
+  );
+};
+
+const CulturalDetailRoute = ({
+  items
+}: {
+  items: CulturalItem[]
+}) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const item = items.find(i => i.id === id);
+
+  if (!item && items.length > 0) return <Navigate to="/cultural" replace />;
+  if (!item) return null;
+
+  return (
+    <CulturalDetailPage
+      item={item}
+      onBack={() => navigate('/cultural')}
+    />
+  );
+};
+
+// --- Main App ---
+
 function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   // --- Hooks & State ---
   const { toast, showSuccess, showError, closeToast } = useToast();
   const {
@@ -44,15 +101,21 @@ function App() {
     total: cartTotal
   } = useCart();
 
-  const [activeTab, setActiveTab] = useState('VITRINE');
-
-  // Navigation State
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
-  const [selectedService, setSelectedService] = useState<Service | null>(null); // For future detail view if needed
-  const [selectedCulturalItem, setSelectedCulturalItem] = useState<CulturalItem | null>(null);
-
   // Derived State
   const currentStore = data.stores.find(s => s.ownerId === currentUser?.id) || null;
+
+  // Determine Active Tab for Header
+  const getActiveTab = (path: string) => {
+    if (path === '/') return 'VITRINE';
+    if (path.startsWith('/loja/')) return 'VITRINE';
+    if (path === '/servicos') return 'SERVICOS';
+    if (path.startsWith('/cultural')) return 'CULTURAL';
+    if (path === '/checkout') return 'CHECKOUT';
+    if (path.startsWith('/dashboard')) return 'DASHBOARD';
+    return 'VITRINE';
+  };
+
+  const activeTab = getActiveTab(location.pathname);
 
   // Actions
   const adminActions = useAdminActions(
@@ -62,16 +125,7 @@ function App() {
       setServices: data.setServices,
       setCulturalItems: data.setCulturalItems,
       setOrders: data.setOrders,
-      setCurrentUser: () => { } // useAuth manages this, but useAdminActions updates profile... which enters useAuth state via listening or optimistic? 
-      // Actually useAdminActions updates DB. useAuth listens. But optimistic update on currentUser is useful. 
-      // I'll skip purely optimistic currentUser update in adminActions for now or pass a dummy if not critical, 
-      // but useAuth handles profile updates well.
-      // Wait, useAdminActions expects setCurrentUser. I'll simply reload page or rely on listener?
-      // I'll modify useAdminActions signature slightly in my mind or just pass a no-op if I rely on listener.
-      // Actually, let's keep it safe. I can't easily pass 'setCurrentUser' from useAuth as it doesn't expose setter.
-      // 'useAuth' exposes 'currentUser' but not 'setCurrentUser'.
-      // Ideally useAuth should expose a way to refresh or update local state.
-      // For now, I'll pass a no-op and rely on Supabase listener in useAuth to pick up changes.
+      setCurrentUser: () => { }
     } as any,
     currentUser,
     showSuccess,
@@ -88,7 +142,6 @@ function App() {
   // --- Handlers ---
 
   const handleAddToCart = (product: Product) => {
-    // Check if adding from different store
     if (cart.length > 0 && cart[0].storeId !== product.storeId) {
       if (confirm('Você tem itens de outra loja no carrinho. Deseja limpar a sacola e iniciar uma nova compra nesta loja?')) {
         clearCart();
@@ -101,12 +154,17 @@ function App() {
     }
   };
 
-  const handleNavigate = (tab: string) => {
-    setActiveTab(tab);
+  const handleHeaderNavigate = (tab: string) => {
+    switch (tab) {
+      case 'VITRINE': navigate('/'); break;
+      case 'SERVICOS': navigate('/servicos'); break;
+      case 'CULTURAL': navigate('/cultural'); break;
+      case 'CHECKOUT': navigate('/checkout'); break;
+      case 'DASHBOARD': navigate('/dashboard'); break;
+      case 'MY_ORDERS': navigate('/dashboard/meus-pedidos'); break;
+      default: navigate('/');
+    }
     window.scrollTo(0, 0);
-    // Reset selections when switching main tabs
-    if (!['VITRINE'].includes(tab)) setSelectedStore(null);
-    if (!['CULTURAL'].includes(tab)) setSelectedCulturalItem(null);
   };
 
   // --- Render ---
@@ -116,7 +174,7 @@ function App() {
 
       <Header
         activeTab={activeTab}
-        setActiveTab={handleNavigate}
+        setActiveTab={handleHeaderNavigate}
         user={currentUser}
         cartCount={cart.reduce((a, b) => a + b.quantity, 0)}
         onAuthClick={() => setShowAuthModal(true)}
@@ -129,88 +187,88 @@ function App() {
             <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Carregando Vitrine...</p>
           </div>
         ) : (
-          <>
-            {/* VITRINE & STORE DETAILS */}
-            {activeTab === 'VITRINE' && (
-              selectedStore ? (
-                <StoreDetailsPage
-                  store={selectedStore}
-                  products={data.products.filter(p => p.storeId === selectedStore.id)}
-                  allRatings={data.ratings}
-                  onBack={() => setSelectedStore(null)}
-                  onAddToCart={handleAddToCart}
-                />
-              ) : (
-                <VitrinePage
-                  stores={data.stores}
-                  products={data.products}
-                  allRatings={data.ratings}
-                  onSelectStore={(store) => { setSelectedStore(store); window.scrollTo(0, 0); }}
-                  onAddToCart={handleAddToCart}
-                />
-              )
-            )}
+          <Routes>
+            <Route path="/" element={
+              <VitrinePage
+                stores={data.stores}
+                products={data.products}
+                allRatings={data.ratings}
+                onSelectStore={(store) => { navigate(`/loja/${store.id}`); window.scrollTo(0, 0); }}
+                onAddToCart={handleAddToCart}
+              />
+            } />
 
-            {/* SERVICES */}
-            {activeTab === 'SERVICOS' && (
+            <Route path="/loja/:id" element={
+              <StoreDetailsRoute
+                stores={data.stores}
+                products={data.products}
+                allRatings={data.ratings}
+                onAddToCart={handleAddToCart}
+              />
+            } />
+
+            <Route path="/servicos" element={
               <ServicesPage
                 services={data.services}
-                onSelectService={(s) => setSelectedService(s)} // Just keeping state, maybe open modal? Details view not implemented yet in Pages, but ServiceCard expands?
-              // Original App said "Ver Detalhes". Maybe just expand card or show modal?
-              // For now, ServicesPage just lists. I'll leave it as list.
+                onSelectService={(s) => { }}
               />
-            )}
+            } />
 
-            {/* CULTURAL */}
-            {activeTab === 'CULTURAL' && (
-              selectedCulturalItem ? (
-                <CulturalDetailPage
-                  item={selectedCulturalItem}
-                  onBack={() => setSelectedCulturalItem(null)}
-                />
-              ) : (
-                <CulturalPage
-                  items={data.culturalItems}
-                  onSelectItem={(item) => { setSelectedCulturalItem(item); window.scrollTo(0, 0); }}
-                />
-              )
-            )}
+            <Route path="/cultural" element={
+              <CulturalPage
+                items={data.culturalItems}
+                onSelectItem={(item) => { navigate(`/cultural/${item.id}`); window.scrollTo(0, 0); }}
+              />
+            } />
 
-            {/* CHECKOUT */}
-            {activeTab === 'CHECKOUT' && (
+            <Route path="/cultural/:id" element={
+              <CulturalDetailRoute items={data.culturalItems} />
+            } />
+
+            <Route path="/checkout" element={
               <CheckoutPage
                 cart={cart}
                 user={currentUser}
                 store={cart.length > 0 ? data.stores.find(s => s.id === cart[0].storeId) || null : null}
                 onUpdateQuantity={updateQuantity}
                 onRemoveFromCart={removeFromCart}
-                onBack={() => handleNavigate('VITRINE')}
+                onBack={() => navigate('/')}
                 onFinalize={handleFinalizePurchase as any}
                 isFinishing={isFinishing}
               />
-            )}
+            } />
 
-            {/* DASHBOARD (Includes MY_ORDERS, PRODUCTS, STOCK via sub-routing logic in component) */}
-            {['DASHBOARD', 'MY_ORDERS', 'PRODUCTS', 'STOCK'].includes(activeTab) && currentUser && (
-              <DashboardPage
-                user={currentUser}
-                currentStore={currentStore}
-                products={data.products}
-                services={data.services}
-                culturalItems={data.culturalItems}
-                orders={data.orders}
-                activeTab={activeTab}
-                onLogout={logout}
-                actions={adminActions}
-                showError={showError}
-                stores={data.stores}
-              />
-            )}
-          </>
+            <Route path="/dashboard" element={
+              currentUser ? (
+                <DashboardPage
+                  user={currentUser}
+                  currentStore={currentStore}
+                  products={data.products}
+                  services={data.services}
+                  culturalItems={data.culturalItems}
+                  orders={data.orders}
+                  activeTab="DASHBOARD"
+                  onLogout={() => { logout(); navigate('/'); }}
+                  actions={adminActions}
+                  showError={showError}
+                  stores={data.stores}
+                />
+              ) : <Navigate to="/" />
+            } />
+
+            <Route path="/dashboard/produtos" element={
+              currentUser ? <DashboardPage user={currentUser} currentStore={currentStore} products={data.products} services={data.services} culturalItems={data.culturalItems} orders={data.orders} activeTab="PRODUCTS" onLogout={() => { logout(); navigate('/'); }} actions={adminActions} showError={showError} stores={data.stores} /> : <Navigate to="/" />
+            } />
+
+            <Route path="/dashboard/meus-pedidos" element={
+              currentUser ? <DashboardPage user={currentUser} currentStore={currentStore} products={data.products} services={data.services} culturalItems={data.culturalItems} orders={data.orders} activeTab="MY_ORDERS" onLogout={() => { logout(); navigate('/'); }} actions={adminActions} showError={showError} stores={data.stores} /> : <Navigate to="/" />
+            } />
+
+            <Route path="*" element={<Navigate to="/" />} />
+
+          </Routes>
         )}
       </main>
-
-      {/* Global Modals */}
 
       {showAuthModal && (
         <AuthPage
@@ -238,7 +296,7 @@ function App() {
                 <CheckCircle size={20} /> Concluído
               </button>
               <button
-                onClick={() => { setShowOrderSuccess(false); handleNavigate('VITRINE'); }}
+                onClick={() => { setShowOrderSuccess(false); navigate('/'); }}
                 className="w-full py-4 bg-gray-50 text-gray-600 font-black rounded-2xl hover:bg-gray-100 transition-all uppercase tracking-widest text-xs"
               >
                 Ver Outras Lojas
