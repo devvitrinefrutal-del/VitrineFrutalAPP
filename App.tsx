@@ -166,6 +166,25 @@ export default function App() {
         console.log('--- [DEBUG] Iniciando busca sequencial de dados ---');
 
         // Chamar as tabelas uma por uma para saber qual trava
+        console.log('--- [DEBUG] TESTE: Raw Fetch para Lojas ---');
+        try {
+          const rawFetchStart = Date.now();
+          const rawRes = await fetch(`${rawUrl}/rest/v1/stores?select=*`, {
+            headers: {
+              'apikey': rawKey,
+              'Authorization': `Bearer ${rawKey}`
+            }
+          });
+          const rawFetchEnd = Date.now();
+          console.log(`--- [DEBUG] Raw Fetch status: ${rawRes.status} (${rawFetchEnd - rawFetchStart}ms) ---`);
+          if (!rawRes.ok) {
+            const errText = await rawRes.text();
+            console.error('--- [DEBUG] Raw Fetch Error Detail:', errText);
+          }
+        } catch (rawErr) {
+          console.error('--- [DEBUG] Raw Fetch Exception:', rawErr);
+        }
+
         console.log('--- [DEBUG] Buscando lojas... ---');
         const { data: storesData, error: storesError } = await supabase.from('stores').select('*');
         if (storesError) {
