@@ -163,73 +163,57 @@ export default function App() {
           return;
         }
 
-        console.log('--- [DEBUG] Iniciando Promise.all para dados core ---');
-        // Parallel fetch for core data
-        const [
-          { data: storesData, error: storesError },
-          { data: productsData, error: productsError },
-          { data: servicesData, error: servicesError },
-          { data: culturalData, error: culturalError },
-          { data: ordersData, error: ordersError }
-        ] = await Promise.all([
-          supabase.from('stores').select('*'),
-          supabase.from('products').select('*'),
-          supabase.from('services').select('*'),
-          supabase.from('cultural_items').select('*'),
-          supabase.from('orders').select('*').order('created_at', { ascending: false })
-        ]);
+        console.log('--- [DEBUG] Iniciando busca sequencial de dados ---');
 
-        console.log('--- [DEBUG] Resultados do fetch recebidos ---');
-
+        // Chamar as tabelas uma por uma para saber qual trava
+        console.log('--- [DEBUG] Buscando lojas... ---');
+        const { data: storesData, error: storesError } = await supabase.from('stores').select('*');
         if (storesError) {
           console.error('Erro lojas:', storesError);
           showError(`Erro ao carregar lojas: ${storesError.message}`);
           setConnectionError(true);
         } else {
-          console.log(`--- [DEBUG] Lojas carregadas: ${storesData?.length || 0} ---`);
+          console.log(`--- [DEBUG] Lojas OK: ${storesData?.length || 0} ---`);
           setConnectionError(false);
           if (storesData) {
-            setStores(storesData.map((s: any) => ({
-              ...s,
-              ownerId: s.owner_id,
-              deliveryFee: s.delivery_fee
-            })));
+            setStores(storesData.map((s: any) => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
           }
         }
 
+        console.log('--- [DEBUG] Buscando produtos... ---');
+        const { data: productsData, error: productsError } = await supabase.from('products').select('*');
         if (productsError) {
           console.error('Erro produtos:', productsError);
           showError(`Erro ao carregar produtos: ${productsError.message}`);
         } else if (productsData) {
-          console.log(`--- [DEBUG] Produtos carregados: ${productsData.length} ---`);
-          setProducts(productsData.map((p: any) => ({
-            ...p,
-            storeId: p.store_id
-          })));
+          console.log(`--- [DEBUG] Produtos OK: ${productsData.length} ---`);
+          setProducts(productsData.map((p: any) => ({ ...p, storeId: p.store_id })));
         }
 
+        console.log('--- [DEBUG] Buscando serviços... ---');
+        const { data: servicesData, error: servicesError } = await supabase.from('services').select('*');
         if (servicesError) {
           console.error('Erro serviços:', servicesError);
         } else if (servicesData) {
-          console.log(`--- [DEBUG] Serviços carregados: ${servicesData.length} ---`);
-          setServices(servicesData.map((s: any) => ({
-            ...s,
-            providerId: s.provider_id,
-            priceEstimate: s.price_estimate
-          })));
+          console.log(`--- [DEBUG] Serviços OK: ${servicesData.length} ---`);
+          setServices(servicesData.map((s: any) => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate })));
         }
 
+        console.log('--- [DEBUG] Buscando cultural... ---');
+        const { data: culturalData, error: culturalError } = await supabase.from('cultural_items').select('*');
         if (culturalError) {
           console.error('Erro cultural:', culturalError);
         } else if (culturalData) {
-          console.log(`--- [DEBUG] Giro cultural carregado: ${culturalData.length} ---`);
+          console.log(`--- [DEBUG] Cultural OK: ${culturalData.length} ---`);
           setCulturalItems(culturalData);
         }
 
+        console.log('--- [DEBUG] Buscando pedidos... ---');
+        const { data: ordersData, error: ordersError } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
         if (ordersError) {
           console.error('Erro pedidos:', ordersError);
         } else if (ordersData) {
-          console.log(`--- [DEBUG] Pedidos carregados: ${ordersData.length} ---`);
+          console.log(`--- [DEBUG] Pedidos OK: ${ordersData.length} ---`);
           setOrders(ordersData.map((o: any) => ({
             ...o,
             storeId: o.store_id,
