@@ -10,7 +10,7 @@ export function useData(showError: (msg: string) => void) {
     const [orders, setOrders] = useState<Order[]>([]);
     const [storeRatings, setStoreRatings] = useState<StoreRating[]>([]);
 
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [connectionError, setConnectionError] = useState(false);
 
     const fetchData = useCallback(async () => {
@@ -68,6 +68,13 @@ export function useData(showError: (msg: string) => void) {
 
     useEffect(() => {
         fetchData();
+
+        // Failsafe: Se em 5 segundos não carregar, libera a tela
+        const timeout = setTimeout(() => {
+            setIsLoading(false);
+        }, 5000);
+
+        return () => clearTimeout(timeout);
     }, [fetchData]);
 
     return {
