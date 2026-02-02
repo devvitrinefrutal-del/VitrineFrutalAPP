@@ -54,8 +54,20 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 <button onClick={onBack} className="bg-white p-3 rounded-xl shadow-sm hover:bg-gray-50 transition-colors">
                     <ArrowLeft size={20} className="text-gray-600" />
                 </button>
-                <h2 className="text-3xl font-black text-black tracking-tighter uppercase">Seu Carrinho</h2>
+                <h2 className="text-3xl font-black text-black tracking-tighter uppercase">Sua Sacola</h2>
             </div>
+
+            {store && (
+                <div className="flex items-center gap-4 bg-orange-500 p-6 rounded-[2rem] text-white shadow-lg shadow-orange-100 border-2 border-orange-400 animate-in slide-in-from-left-4">
+                    <img src={store.image} className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20" />
+                    <div>
+                        <h3 className="font-black text-lg leading-none uppercase tracking-tighter">{store.name}</h3>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mt-1 flex items-center gap-2">
+                            <Building2 size={12} /> {store.category}
+                        </p>
+                    </div>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Cart Items List */}
@@ -130,6 +142,23 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                                     placeholder="Endereço completo (Rua, Número, Bairro, Referência)"
                                     className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-medium text-black focus:ring-2 focus:ring-orange-200 min-h-[100px] resize-none"
                                 />
+                            </div>
+                        )}
+
+                        {deliveryMethod === 'RETIRADA' && store && (
+                            <div className="space-y-4 animate-in slide-in-from-top-2">
+                                <div className="flex flex-col gap-3 p-6 bg-orange-50 border border-orange-100 rounded-2xl">
+                                    <div className="flex items-center gap-2 text-orange-600">
+                                        <MapPin size={18} />
+                                        <span className="font-black text-[10px] uppercase tracking-widest">Endereço de Retirada</span>
+                                    </div>
+                                    <p className="font-bold text-black text-sm pr-4">
+                                        {store.address} - {store.neighborhood}
+                                    </p>
+                                    <p className="text-[10px] text-orange-500 font-bold uppercase tracking-widest italic">
+                                        * Retire seu pedido diretamente com o lojista.
+                                    </p>
+                                </div>
                             </div>
                         )}
 

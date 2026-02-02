@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Star, Store as StoreIcon } from 'lucide-react';
+import { ArrowLeft, Star, Store as StoreIcon, MapPin } from 'lucide-react';
 import { Store, Product, StoreRating } from '../../types';
 import { ProductCard } from '../components/business/ProductCard';
 
@@ -44,6 +44,10 @@ export const StoreDetailsPage: React.FC<StoreDetailsPageProps> = ({
                         <div className="flex items-center gap-2 text-gray-400 font-black text-[10px] uppercase tracking-widest">
                             <StoreIcon size={16} className="text-orange-500" /> {store.category}
                         </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-3 text-gray-500 font-medium text-xs">
+                        <MapPin size={14} className="text-gray-400" />
+                        <span>{store.address} - {store.neighborhood}</span>
                     </div>
                 </div>
             </div>
