@@ -61,7 +61,10 @@ export function useData(showError: (msg: string) => void) {
             setServices(servicesData.map((s: any) => ({
                 ...s,
                 providerId: s.provider_id,
-                priceEstimate: s.price_estimate
+                priceEstimate: s.price_estimate,
+                dailyRevenueAdj: s.daily_revenue_adj || 0,
+                monthlyRevenueAdj: s.monthly_revenue_adj || 0,
+                lastFinanceUpdate: s.last_finance_update
             })));
         }
 

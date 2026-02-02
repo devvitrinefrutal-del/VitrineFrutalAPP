@@ -39,6 +39,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         else if (activeTab === 'DASHBOARD') setSection('OVERVIEW');
     }, [activeTab]);
 
+    // Financial Sync Trigger
+    useEffect(() => {
+        if (user.role === 'LOJISTA' && currentStore) {
+            actions.syncFinancials(currentStore);
+        }
+    }, [currentStore?.id]);
+
     // Modals State
     const [showProductModal, setShowProductModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -55,6 +62,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     // Auxiliary State for non-extracted modals (Store/Service/Cultural)
     const [modalImages, setModalImages] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
+
+    const [showFinanceModal, setShowFinanceModal] = useState(false);
+    const [financeType, setFinanceType] = useState<'DAILY' | 'MONTHLY'>('DAILY');
 
     // Common Handlers for generic modals (Store/Service/Cultural)
     // ProductModal handles itself mostly via onSave prop, but Store/Service generic modals handled here inline for now
@@ -75,6 +85,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         const success = await actions.saveService(fd, modalImages, editingService);
         setIsSaving(false);
         if (success) setShowServiceModal(false);
+    };
+
+    const handleSaveFinanceAdj = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setIsSaving(true);
+        const fd = new FormData(e.currentTarget);
+        const value = parseFloat(fd.get('adjustment') as string) || 0;
+
+        const updateData = new FormData();
+        if (financeType === 'DAILY') {
+            updateData.set('dailyRevenueAdj', value.toString());
+        } else {
+            updateData.set('monthlyRevenueAdj', value.toString());
+        }
+
+        const success = await actions.saveStore(updateData, null, currentStore);
+        setIsSaving(false);
+        if (success) setShowFinanceModal(false);
     };
 
     const handleSaveCulturalWrapper = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -253,10 +281,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                     })()}
                                 </p>
                                 <button
-                                    onClick={() => alert('Em breve: Ajuste manual direto no banco de dados.')}
-                                    className="absolute top-4 right-4 text-[8px] font-black uppercase text-gray-300 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => { setFinanceType('DAILY'); setShowFinanceModal(true); }}
+                                    className="absolute top-4 right-4 text-[8px] font-black uppercase text-gray-400 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 px-2 py-1 rounded-md"
                                 >
-                                    Ajustar
+                                    Corrigir
                                 </button>
                             </div>
 
@@ -274,14 +302,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                             o.createdAt.startsWith(month)
                                         );
                                         const revenue = ordersMonth.reduce((acc, o) => acc + o.total, 0);
-                                        return (revenue + (currentStore?.monthlyRevenueAdj || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                                        // INTERCONEXÃO: O ajuste mensal total inclui o ajuste de Hoje
+                                        const totalAdj = (currentStore?.monthlyRevenueAdj || 0) + (currentStore?.dailyRevenueAdj || 0);
+                                        return (revenue + totalAdj).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
                                     })()}
                                 </p>
                                 <button
-                                    onClick={() => alert('Em breve: Ajuste manual direto no banco de dados.')}
-                                    className="absolute top-4 right-4 text-[8px] font-black uppercase text-gray-300 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => { setFinanceType('MONTHLY'); setShowFinanceModal(true); }}
+                                    className="absolute top-4 right-4 text-[8px] font-black uppercase text-gray-400 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 px-2 py-1 rounded-md"
                                 >
-                                    Ajustar
+                                    Corrigir
                                 </button>
                             </div>
                         </div>
@@ -552,6 +582,36 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     <textarea name="description" required defaultValue={editingCulturalItem?.description} placeholder="Descrição Detalhada" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold h-24 resize-none" />
                     <MultiImageInput max={5} initialImages={modalImages} onImagesChange={setModalImages} showError={showError} />
                     <button className="w-full py-4 bg-purple-600 text-white font-black rounded-2xl uppercase tracking-widest text-xs">Salvar Evento</button>
+                </form>
+            </Modal>
+
+            {/* Finance Adjustment Modal */}
+            <Modal isOpen={showFinanceModal} onClose={() => setShowFinanceModal(false)} title={`Ajuste de Faturamento ${financeType === 'DAILY' ? 'Diário' : 'Mensal'}`}>
+                <form onSubmit={handleSaveFinanceAdj} className="space-y-6">
+                    <div className="p-6 bg-orange-50 rounded-3xl border border-orange-100">
+                        <p className="text-[10px] font-black uppercase text-orange-600 tracking-widest mb-2 text-center">Instruções</p>
+                        <p className="text-[11px] font-medium text-orange-800 leading-relaxed text-center">
+                            Use este campo para somar ou subtrair valores extras do faturamento exibido. <br />
+                            Exemplo: Se vendeu 100 reais por fora, digite **100**. Se quer remover 50, digite **-50**.
+                        </p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Valor do Ajuste (R$)</label>
+                        <input
+                            name="adjustment"
+                            type="number"
+                            step="0.01"
+                            autoFocus
+                            defaultValue={financeType === 'DAILY' ? currentStore?.dailyRevenueAdj : currentStore?.monthlyRevenueAdj}
+                            placeholder="0,00"
+                            className="w-full p-6 bg-gray-50 rounded-2xl outline-none font-black text-2xl text-center focus:ring-2 ring-orange-200 transition-all"
+                        />
+                    </div>
+
+                    <button disabled={isSaving} className="w-full py-4 bg-black text-white font-black rounded-2xl uppercase tracking-widest text-xs shadow-xl active:scale-95 transition-all">
+                        {isSaving ? 'Gravando...' : 'Confirmar Ajuste'}
+                    </button>
                 </form>
             </Modal>
 

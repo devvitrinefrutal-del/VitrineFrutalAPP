@@ -28,6 +28,7 @@ export interface Store {
   deliveryFee?: number;
   dailyRevenueAdj?: number;
   monthlyRevenueAdj?: number;
+  lastFinanceUpdate?: string; // ISO Date para controle de resets
 }
 
 export interface Product {

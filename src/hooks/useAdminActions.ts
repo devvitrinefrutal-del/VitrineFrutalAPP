@@ -181,6 +181,50 @@ export function useAdminActions(
         }
     };
 
+    const syncFinancials = async (store: Store) => {
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        const lastUpdate = store.lastFinanceUpdate || today;
+
+        if (lastUpdate === today) return; // Já está atualizado
+
+        const lastDate = new Date(lastUpdate);
+        const isNewMonth = now.getMonth() !== lastDate.getMonth() || now.getFullYear() !== lastDate.getFullYear();
+
+        let newMonthly = store.monthlyRevenueAdj || 0;
+        let newDaily = 0;
+
+        if (isNewMonth) {
+            newMonthly = 0; // Zerar mensal no novo mês
+        } else {
+            // Fim do dia: Somar o ajuste diário ao acumulado mensal
+            newMonthly += (store.dailyRevenueAdj || 0);
+        }
+
+        try {
+            const { error } = await supabase.from('stores')
+                .update({
+                    daily_revenue_adj: 0,
+                    monthly_revenue_adj: newMonthly,
+                    last_finance_update: today
+                })
+                .eq('id', store.id);
+
+            if (error) throw error;
+
+            setters.setStores(prev => prev.map(s => s.id === store.id ? {
+                ...s,
+                dailyRevenueAdj: 0,
+                monthlyRevenueAdj: newMonthly,
+                lastFinanceUpdate: today
+            } : s));
+
+            console.log(`[FINANCE] Sincronizado para ${store.name}: Dia zerado, Mensal: ${newMonthly}`);
+        } catch (e) {
+            console.error('[FINANCE] Erro ao sincronizar:', e);
+        }
+    };
+
     const saveService = async (formData: FormData, images: string[], editingService: Service | null) => {
         console.log('--- [SISTEMA] Iniciando saveService... ---');
         try {
@@ -298,6 +342,7 @@ export function useAdminActions(
         saveService,
         saveCulturalItem,
         updateOrderStatus,
-        updateOrderDeliveryFee
+        updateOrderDeliveryFee,
+        syncFinancials
     };
 }
