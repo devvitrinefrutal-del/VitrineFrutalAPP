@@ -1,6 +1,6 @@
 import React from 'react';
 import { DollarSign, ChevronRight } from 'lucide-react';
-import { Service } from '../../types';
+import { Service } from '../../../types';
 
 interface ServiceCardProps {
     service: Service;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, ImageIcon } from 'lucide-react';
-import { Product } from '../../types';
+import { Product } from '../../../types';
 import { Modal } from '../ui/Modal';
 import { MultiImageInput } from '../ui/MultiImageInput';
 

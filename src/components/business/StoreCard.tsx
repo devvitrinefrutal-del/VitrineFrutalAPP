@@ -1,6 +1,6 @@
 import React from 'react';
 import { Star, ChevronRight } from 'lucide-react';
-import { Store, StoreRating } from '../../types';
+import { Store, StoreRating } from '../../../types';
 
 interface StoreCardProps {
     store: Store;

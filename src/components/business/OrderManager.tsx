@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Package, Truck, CheckCircle, XCircle, Clock, MapPin, DollarSign, MessageCircle } from 'lucide-react';
-import { Order, Store } from '../../types';
+import { Order, Store } from '../../../types';
 
 interface OrderManagerProps {
     orders: Order[];
@@ -24,7 +24,7 @@ const OrderCol = ({ title, list, color, onSelectOrder }: { title: string, list: 
                             <p className="font-black text-black text-xs uppercase tracking-tighter mb-1">{order.customerName}</p>
                             <p className="text-[9px] text-gray-400 font-bold">#{order.id.slice(0, 8)}</p>
                         </div>
-                        <span className="bg-gray-50 text-gray-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">{new Date(order.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="bg-gray-50 text-gray-600 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest">{new Date(order.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <div className="space-y-2 mb-4 border-t border-b border-gray-50 py-3">
                         {order.items.slice(0, 2).map((item, i) => (
