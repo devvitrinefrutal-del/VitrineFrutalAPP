@@ -79,34 +79,53 @@ export function useCheckout(
 
             console.log('Pedido criado:', data);
 
-            // REDUCE STOCK
+            // 1. Otimistic Stock Update
             console.log('Atualizando estoque...');
             for (const item of cart) {
                 const product = products.find(p => p.id === item.productId);
                 if (product) {
                     const newStock = Math.max(0, product.stock - item.quantity);
-                    console.log(`Produto ${product.name}: estoque ${product.stock} -> ${newStock}`);
-
                     await supabase.from('products').update({ stock: newStock }).eq('id', item.productId);
-
-                    // Otimistic update
                     setProducts(prev => prev.map(p => p.id === item.productId ? { ...p, stock: newStock } : p));
                 }
             }
 
-            // SEND WHATSAPP
-            // Na v2.0, enviamos o link do pedido ou resumo
-            // Aqui mantemos a lógica original simplificada ou podemos melhorar.
-            // O App.tsx original montava uma mensagem gigante. 
-            // Por simplicidade, vou omitir a construção da mensagem completa aqui para economizar linhas, 
-            // mas idealmente deveria estar aqui.
-            // ... (Lógica de WhatsApp omitida ou simplificada para alert)
+            // 2. Fetch Store Info for WhatsApp number
+            const { data: storeData } = await supabase.from('stores').select('whatsapp, name').eq('id', storeId).single();
+            const storePhone = storeData?.whatsapp || '';
+            const storeName = storeData?.name || 'Loja';
 
+            // 3. Build WhatsApp Message
+            const itemsList = cart.map(item => `• ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
+            const deliveryTxt = deliveryMethod === 'ENTREGA' ? `🚚 *Entrega:* ${customerAddress}\n💰 *Taxa:* R$ ${deliveryFee.toFixed(2)}` : '🏪 *Retirada na Loja*';
+            const observationTxt = observation ? `\n📝 *OBS:* ${observation}` : '';
+            const paymentTxt = `💳 *Pagamento:* ${paymentMethod}${changeFor ? ` (Troco para R$ ${changeFor})` : ''}`;
+
+            const message = window.encodeURIComponent(
+                `*🛍️ NOVO PEDIDO - ${storeName}*\n\n` +
+                `*Cliente:* ${user.name}\n` +
+                `*WhatsApp:* ${user.phone || 'Não informado'}\n\n` +
+                `*ITENS:*\n${itemsList}\n\n` +
+                `${deliveryTxt}\n` +
+                `${paymentTxt}\n` +
+                `${observationTxt}\n\n` +
+                `*TOTAL: R$ ${finalTotal.toFixed(2)}*`
+            );
+
+            // 4. Finalize
             console.log('Processo finalizado com sucesso.');
             setShowOrderSuccess(true);
             clearCart();
-            return true;
 
+            // Redirect to WhatsApp
+            if (storePhone) {
+                setTimeout(() => {
+                    const cleanPhone = storePhone.replace(/\D/g, '');
+                    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
+                }, 1000);
+            }
+
+            return true;
         } catch (error: any) {
             console.error('Erro no catch:', error);
             showError('Erro ao processar pedido: ' + error.message);

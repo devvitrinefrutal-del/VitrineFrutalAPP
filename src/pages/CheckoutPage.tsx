@@ -138,7 +138,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                             <input
                                 value={observation}
                                 onChange={(e) => setObservation(e.target.value)}
-                                placeholder="Ex: Tirar cebola, campainha estragada..."
+                                placeholder="Escreva aqui suas observações (opcional)"
                                 className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-medium text-black focus:ring-2 focus:ring-orange-200"
                             />
                         </div>
@@ -161,7 +161,6 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                                     <span className="font-black text-[10px] uppercase tracking-widest">
                                         {method === 'CARTAO' ? 'Cartão Crédito/Débito' : method}
                                     </span>
-                                    {method === 'PIX' && <span className="text-[10px] bg-green-200 text-green-800 px-2 py-0.5 rounded-md font-bold">-5% OFF</span>}
                                 </button>
                             ))}
                         </div>
@@ -188,15 +187,9 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                                 <span>Entrega</span>
                                 <span>{deliveryFee === 0 ? 'Grátis' : `R$ ${deliveryFee.toFixed(2)}`}</span>
                             </div>
-                            {paymentMethod === 'PIX' && (
-                                <div className="flex justify-between text-[11px] font-bold text-green-500 uppercase tracking-widest">
-                                    <span>Desconto PIX</span>
-                                    <span>- R$ {(cartTotal * 0.05).toFixed(2)}</span>
-                                </div>
-                            )}
                             <div className="flex justify-between items-center pt-4 text-xl font-black text-gray-900">
                                 <span>Total</span>
-                                <span>R$ {(paymentMethod === 'PIX' ? finalTotal - (cartTotal * 0.05) : finalTotal).toFixed(2)}</span>
+                                <span>R$ {finalTotal.toFixed(2)}</span>
                             </div>
                         </div>
 
