@@ -41,10 +41,17 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
         { name: 'Papelaria e Presentes', icon: '🎁' }
     ];
 
-    const [selectedBairro, setSelectedBairro] = useState('Todos');
+    const [selectedNeighborhood, setSelectedNeighborhood] = useState('Todos');
     const [onlyDelivery, setOnlyDelivery] = useState(false);
 
-    const bairros = ['Todos', 'Centro', 'Ipê', 'Nossa Senhora do Carmo', 'Princesa Isabel', 'Vila Esperança', 'Novo Horizonte', 'Progresso'];
+    const neighborhoods = [
+        'Todos',
+        'Centro', 'Caju', 'XV de Novembro', 'Estudantil',
+        'Nossa Senhora do Carmo', 'Nossa Senhora Aparecida', 'Princesa Isabel I e II', 'Santos Dumont', 'Progresso', 'Alto Boa Vista', 'Eldorado', 'Vila Esperança',
+        'Cidade Jardim', 'Jardim do Bosque I e II', 'Jardim das Laranjeiras', 'Jardim das Palmeiras', 'Jardim Brasil', 'Jardim das Esmeraldas', 'Jardins dos Ipês', 'Morada dos Ipês', 'Ipê Amarelo',
+        'Frutal II e III', 'Novo Horizonte', 'Nova Frutal', 'Waldemar Marchi I e II', 'Paralelo XX', 'Alceu Queiroz', 'Residencial das Américas', 'Residencial Parque das Acácias',
+        'Granville Casa Blanca', 'Villa Florence'
+    ];
 
     const handleSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;

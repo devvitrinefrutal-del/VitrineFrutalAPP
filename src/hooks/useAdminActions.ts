@@ -165,6 +165,10 @@ export function useAdminActions(
                     ...s,
                     ...data,
                     deliveryFee: data.delivery_fee,
+                    neighborhood: data.neighborhood,
+                    hasDelivery: data.has_delivery,
+                    latitude: data.latitude,
+                    longitude: data.longitude,
                     dailyRevenueAdj: data.daily_revenue_adj,
                     monthlyRevenueAdj: data.monthly_revenue_adj
                 } : s));
