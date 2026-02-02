@@ -173,6 +173,16 @@ function App() {
   return (
     <div className="min-h-screen bg-[#FDFDFD] font-sans text-gray-900 selection:bg-orange-100 selection:text-orange-900 pb-24 md:pb-8">
 
+      {/* Painel de Diagnóstico Temporário */}
+      <div className="fixed top-0 left-0 right-0 z-[200] bg-black text-white text-[10px] p-1 flex gap-4 overflow-x-auto opacity-80 pointer-events-none">
+        <span>V4-RESILIENTE</span>
+        <span>LOJAS: {data.stores.length}</span>
+        <span>PRODS: {data.products.length}</span>
+        <span>PEDIDOS: {data.orders.length}</span>
+        <span>STATUS: {data.loading ? 'CARREGANDO...' : 'PRONTO'}</span>
+        <span>ERRO: {data.connectionError ? 'SIM' : 'NÃO'}</span>
+      </div>
+
       <Header
         activeTab={activeTab}
         onTabChange={handleHeaderNavigate}
