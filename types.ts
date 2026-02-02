@@ -82,6 +82,8 @@ export interface Order {
     quantity: number;
     price: number;
   }[];
+  paymentMethod?: string;
+  observation?: string;
   createdAt: string;
 }
 

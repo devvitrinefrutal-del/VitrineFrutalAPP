@@ -92,6 +92,8 @@ export function useData(showError: (msg: string) => void) {
                     customerAddress: o.customer_address,
                     deliveryMethod: o.delivery_method,
                     deliveryFee: o.delivery_fee,
+                    paymentMethod: o.payment_method,
+                    observation: o.observation,
                     dispatchedAt: o.dispatched_at,
                     createdAt: o.created_at
                 })));
