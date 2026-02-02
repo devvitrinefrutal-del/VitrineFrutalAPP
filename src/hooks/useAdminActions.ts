@@ -126,17 +126,31 @@ export function useAdminActions(
     };
 
     const saveStore = async (formData: FormData, image: string | null, editingStore: Store | null) => {
+        console.log('--- [SISTEMA] Iniciando saveStore... ---');
         try {
+            const rawEmail = formData.get('email');
+            const rawWhatsapp = formData.get('whatsapp');
+            const rawName = formData.get('name');
+            const rawCategory = formData.get('category');
+            const rawAddress = formData.get('address');
+            const rawDeliveryFee = formData.get('deliveryFee');
+
+            console.log('[DEBUG saveStore] Campos Brutos:', {
+                rawEmail, rawWhatsapp, rawName, rawCategory, rawAddress, rawDeliveryFee
+            });
+
             const data: any = {
-                name: formData.get('name') as string,
-                category: formData.get('category') as string,
-                whatsapp: normalizeWhatsApp(formData.get('whatsapp') as string),
-                address: formData.get('address') as string,
-                cnpj: formData.get('cnpj') as string,
-                email: (formData.get('email') as string || '').trim().toLowerCase(),
-                delivery_fee: parseFloat(formData.get('deliveryFee') as string) || 0,
+                name: (rawName as string || '').toString(),
+                category: (rawCategory as string || '').toString(),
+                whatsapp: normalizeWhatsApp(rawWhatsapp as string || ''),
+                address: (rawAddress as string || '').toString(),
+                cnpj: (formData.get('cnpj') as string || '').toString(),
+                email: (rawEmail as string || '').toString().trim().toLowerCase(),
+                delivery_fee: parseFloat(rawDeliveryFee as string) || 0,
                 image: image || editingStore?.image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
             };
+
+            console.log('[DEBUG saveStore] Dados Processados:', data);
 
             if (editingStore) {
                 const { error } = await supabase.from('stores').update(data).eq('id', editingStore.id);
@@ -160,13 +174,15 @@ export function useAdminActions(
     };
 
     const saveService = async (formData: FormData, images: string[], editingService: Service | null) => {
+        console.log('--- [SISTEMA] Iniciando saveService... ---');
         try {
+            const rawEmail = formData.get('email');
             const data: any = {
                 name: formData.get('name') as string,
                 type: formData.get('type') as string,
-                whatsapp: normalizeWhatsApp(formData.get('whatsapp') as string),
+                whatsapp: normalizeWhatsApp(formData.get('whatsapp') as string || ''),
                 address: formData.get('address') as string,
-                email: (formData.get('email') as string || '').trim().toLowerCase(),
+                email: (rawEmail as string || '').toString().trim().toLowerCase(),
                 description: formData.get('description') as string,
                 price_estimate: formData.get('priceEstimate') as string,
                 image: images[0] || editingService?.image || 'https://images.unsplash.com/photo-1581578731522-745d05ad9a2d?w=400&h=300&fit=crop',

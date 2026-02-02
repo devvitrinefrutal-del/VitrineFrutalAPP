@@ -76,8 +76,8 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
     };
 
     const login = async (formData: FormData) => {
-        const email = (formData.get('email') as string).trim().toLowerCase();
-        const password = (formData.get('password') as string).trim();
+        const email = (formData.get('email') as string || '').trim().toLowerCase();
+        const password = (formData.get('password') as string || '').trim();
         const isAuthorizedDev = email === 'devvitrinefrutal@gmail.com';
 
         console.log('--- [AUTH] Iniciando login... ---');
