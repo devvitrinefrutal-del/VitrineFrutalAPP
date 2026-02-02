@@ -85,7 +85,11 @@ export function useCheckout(
                 body: JSON.stringify(newOrderDB)
             });
 
-            if (!orderResponse.ok) throw new Error('Falha ao registrar pedido no banco.');
+            if (!orderResponse.ok) {
+                const errorBody = await orderResponse.json();
+                console.error('Erro detalhado do Supabase:', errorBody);
+                throw new Error(errorBody.message || 'Falha ao registrar pedido no banco.');
+            }
             const orderData = await orderResponse.json();
             console.log('Pedido criado:', orderData);
 
