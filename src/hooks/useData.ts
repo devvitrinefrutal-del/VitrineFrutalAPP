@@ -45,8 +45,8 @@ export function useData(showError: (msg: string) => void) {
         if (storesData) {
             setStores(storesData.map((s: any) => ({
                 ...s,
-                ownerId: s.owner_id || s.id_do_proprietario || s.id_do_proprietário,
-                bairro: s.bairro,
+                ownerId: s.owner_id,
+                neighborhood: s.neighborhood,
                 hasDelivery: s.has_delivery,
                 latitude: s.latitude,
                 longitude: s.longitude

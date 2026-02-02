@@ -26,7 +26,7 @@ export interface Store {
   email: string;
   cnpj: string;
   deliveryFee?: number;
-  bairro?: string;
+  neighborhood?: string;
   hasDelivery?: boolean;
   latitude?: number;
   longitude?: number;

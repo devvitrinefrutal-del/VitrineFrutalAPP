@@ -564,7 +564,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Bairro</label>
-                            <select name="bairro" required defaultValue={currentStore?.bairro} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
+                            <select name="neighborhood" required defaultValue={currentStore?.neighborhood} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
                                 <option value="">Escolha...</option>
                                 <optgroup label="Centro e Arredores">
                                     <option value="Centro">Centro</option>

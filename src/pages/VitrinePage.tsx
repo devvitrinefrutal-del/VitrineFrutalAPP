@@ -66,13 +66,13 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
 
     const filteredStores = stores.filter(s => {
         const matchesCategory = selectedCategory === 'Todas' || s.category === selectedCategory;
-        const matchesBairro = selectedBairro === 'Todos' || s.bairro === selectedBairro;
+        const matchesNeighborhood = selectedNeighborhood === 'Todos' || s.neighborhood === selectedNeighborhood;
         const matchesDelivery = !onlyDelivery || s.hasDelivery;
         const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesBairro && matchesDelivery && matchesSearch;
+        return matchesCategory && matchesNeighborhood && matchesDelivery && matchesSearch;
     });
 
-    const hasActiveFilters = searchQuery.length > 0 || priceRange.min !== '' || priceRange.max !== '' || selectedCategory !== 'Todas' || selectedBairro !== 'Todos' || onlyDelivery;
+    const hasActiveFilters = searchQuery.length > 0 || priceRange.min !== '' || priceRange.max !== '' || selectedCategory !== 'Todas' || selectedNeighborhood !== 'Todos' || onlyDelivery;
 
     return (
         <div className="space-y-8 animate-in fade-in pb-20">
@@ -122,8 +122,8 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-2">Bairro</label>
-                                    <select value={selectedBairro} onChange={(e) => setSelectedBairro(e.target.value)} className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold text-sm appearance-none">
-                                        {bairros.map(b => <option key={b} value={b}>{b}</option>)}
+                                    <select value={selectedNeighborhood} onChange={(e) => setSelectedNeighborhood(e.target.value)} className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold text-sm appearance-none">
+                                        {neighborhoods.map(b => <option key={b} value={b}>{b}</option>)}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
@@ -136,7 +136,7 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
                                     <input type="checkbox" checked={onlyDelivery} onChange={(e) => setOnlyDelivery(e.target.checked)} className="w-5 h-5 rounded-lg border-gray-200 text-orange-500 focus:ring-orange-500" />
                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">Apenas quem faz Delivery</span>
                                 </label>
-                                <button onClick={() => { setSearchQuery(''); setSelectedCategory('Todas'); setSelectedBairro('Todos'); setOnlyDelivery(false); setPriceRange({ min: '', max: '' }); setShowFilters(false); }} className="px-6 py-3 bg-red-50 text-red-500 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-red-100 transition-colors">
+                                <button onClick={() => { setSearchQuery(''); setSelectedCategory('Todas'); setSelectedNeighborhood('Todos'); setOnlyDelivery(false); setPriceRange({ min: '', max: '' }); setShowFilters(false); }} className="px-6 py-3 bg-red-50 text-red-500 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-red-100 transition-colors">
                                     Limpar Tudo
                                 </button>
                             </div>
