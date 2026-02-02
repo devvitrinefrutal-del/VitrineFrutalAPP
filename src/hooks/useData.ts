@@ -28,12 +28,12 @@ export function useData(showError: (msg: string) => void) {
         setIsLoading(true);
 
         // BUSCA DE LOJAS (Tentando capturar qualquer sinal)
-        console.log('[DETETIVE] Pedindo lojas...');
+        console.log('[DETETIVE] Pedindo lojas via SDK...');
         supabase.from('stores').select('*').then(({ data, error }) => {
             if (error) {
                 console.error("[DETETIVE] Erro retornado pelo SDK:", error);
             } else {
-                console.log(`[DETETIVE] Resposta recebida! Quantidade: ${data?.length || 0}`);
+                console.log(`[DETETIVE] Resposta SDK recebida! Quantidade: ${data?.length || 0}`);
                 if (data) setStores(data.map(s => ({
                     ...s,
                     ownerId: s.owner_id || s.id_do_proprietario || s.id_do_proprietário,
@@ -41,6 +41,16 @@ export function useData(showError: (msg: string) => void) {
                 })));
             }
         }).catch(err => console.error("[DETETIVE] Catch fatal no SDK:", err));
+
+        // TESTE 2: Fetch Nativo GET (Vê se o problema é o SDK)
+        fetch(`${url}/rest/v1/stores?select=*`, {
+            headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+        })
+            .then(async r => {
+                const raw = await r.json();
+                console.log('--- [REDES] DADOS BRUTOS (NATIVO):', raw);
+            })
+            .catch(e => console.error('--- [REDES] Falha no Fetch Nativo GET:', e));
 
         // Timeout para liberar a tela e permitir navegar (Debug)
         setTimeout(() => {
