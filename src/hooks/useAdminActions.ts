@@ -317,6 +317,35 @@ export function useAdminActions(
 
     const updateOrderStatus = async (orderId: string, newStatus: string) => {
         try {
+            const order = setters.setOrders ? undefined : null; // Accessing orders from state
+            // Note: In useAdminActions, we don't have direct access to 'orders' state unless we use the setter to find it.
+            // Better approach: fetch the order details first if we need to restore stock.
+
+            if (newStatus === 'CANCELADO') {
+                const { data: orderData, error: fetchError } = await supabase
+                    .from('orders')
+                    .select('items, status')
+                    .eq('id', orderId)
+                    .single();
+
+                if (!fetchError && orderData && orderData.status !== 'CANCELADO') {
+                    // Restaurar estoque para cada item
+                    for (const item of orderData.items) {
+                        const { data: prodData } = await supabase
+                            .from('products')
+                            .select('stock')
+                            .eq('id', item.productId)
+                            .single();
+
+                        if (prodData) {
+                            const newStock = (prodData.stock || 0) + item.quantity;
+                            await supabase.from('products').update({ stock: newStock }).eq('id', item.productId);
+                            setters.setProducts(prev => prev.map(p => p.id === item.productId ? { ...p, stock: newStock } : p));
+                        }
+                    }
+                }
+            }
+
             const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
             if (error) throw error;
 
