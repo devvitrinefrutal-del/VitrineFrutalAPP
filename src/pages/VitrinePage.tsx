@@ -11,6 +11,7 @@ interface VitrinePageProps {
     allRatings: StoreRating[];
     onSelectStore: (store: Store) => void;
     onAddToCart: (product: Product) => void;
+    searchGlobal: (query: string) => Promise<any[]>;
 }
 
 export const VitrinePage: React.FC<VitrinePageProps> = ({
@@ -18,13 +19,30 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
     products,
     allRatings,
     onSelectStore,
-    onAddToCart
+    onAddToCart,
+    searchGlobal
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('Todas');
+    const [isSearching, setIsSearching] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [priceRange, setPriceRange] = useState<{ min: string, max: string }>({ min: '', max: '' });
 
-    // Filter Logic
+    const categories = [
+        'Todas', 'Autopeças', 'Eletrônicos', 'Vestuário', 'Diversos', 'Casa e Banho'
+    ];
+
+    const handleSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setSearchQuery(val);
+        if (val.length >= 3) {
+            setIsSearching(true);
+            await searchGlobal(val);
+            setIsSearching(false);
+        }
+    };
+
+    // Filter Logic - Local for stores, global search already happened for products
     const filteredProducts = products.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesMinPrice = priceRange.min ? p.price >= parseFloat(priceRange.min) : true;
@@ -32,7 +50,13 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
         return matchesSearch && matchesMinPrice && matchesMaxPrice;
     });
 
-    const hasActiveFilters = searchQuery.length > 0 || priceRange.min !== '' || priceRange.max !== '';
+    const filteredStores = stores.filter(s => {
+        const matchesCategory = selectedCategory === 'Todas' || s.category === selectedCategory;
+        const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
+
+    const hasActiveFilters = searchQuery.length > 0 || priceRange.min !== '' || priceRange.max !== '' || selectedCategory !== 'Todas';
 
     return (
         <div className="space-y-8 animate-in fade-in pb-20">
@@ -62,7 +86,7 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
                             <Search className="text-gray-400" size={20} />
                             <input
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={handleSearch}
                                 placeholder="O que você procura hoje?"
                                 className="w-full py-3 bg-transparent outline-none font-bold text-gray-700 placeholder-gray-400"
                             />
@@ -94,6 +118,21 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
                     )}
                 </div>
             </div>
+
+            {/* Categories Bar */}
+            {!hasActiveFilters && (
+                <div className="flex overflow-x-auto gap-3 pb-4 no-scrollbar -mx-4 px-4 scroll-smooth">
+                    {categories.map(cat => (
+                        <button
+                            key={cat}
+                            onClick={() => setSelectedCategory(cat)}
+                            className={`whitespace-nowrap px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${selectedCategory === cat ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'bg-white border border-gray-100 text-gray-400 hover:border-orange-200'}`}
+                        >
+                            {cat}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {hasActiveFilters ? (
                 <div className="space-y-8">
@@ -132,17 +171,23 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-10">
-                        {stores.map((store) => (
-                            <StoreCard
-                                key={store.id}
-                                store={store}
-                                ratings={allRatings}
-                                onClick={onSelectStore}
-                            />
-                        ))}
+                        {filteredStores.length > 0 ? (
+                            filteredStores.map((store) => (
+                                <StoreCard
+                                    key={store.id}
+                                    store={store}
+                                    ratings={allRatings}
+                                    onClick={onSelectStore}
+                                />
+                            ))
+                        ) : (
+                            <div className="col-span-full py-20 text-center bg-gray-50 rounded-[3rem]">
+                                <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Nenhuma loja encontrada nesta categoria</p>
+                            </div>
+                        )}
                     </div>
-                </div>
+                </div >
             )}
-        </div>
+        </div >
     );
 };

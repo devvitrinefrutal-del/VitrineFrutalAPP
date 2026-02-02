@@ -22,11 +22,12 @@ interface DashboardPageProps {
     actions: any; // Return type of useAdminActions
     showError: (msg: string) => void;
     stores: Store[]; // Need full list for some checks?
+    fetchStoreProducts: (storeId: string) => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
     user, currentStore, products, services, culturalItems, orders, activeTab,
-    onLogout, actions, showError, stores
+    onLogout, actions, showError, stores, fetchStoreProducts
 }) => {
     // Internal Navigation State
     const [section, setSection] = useState('OVERVIEW');
@@ -39,10 +40,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         else if (activeTab === 'DASHBOARD') setSection('OVERVIEW');
     }, [activeTab]);
 
-    // Financial Sync Trigger
+    // Financial Sync Trigger & Products Load
     useEffect(() => {
         if (user.role === 'LOJISTA' && currentStore) {
             actions.syncFinancials(currentStore);
+            fetchStoreProducts(currentStore.id);
         }
     }, [currentStore?.id]);
 
@@ -540,7 +542,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <Modal isOpen={showStoreModal} onClose={() => setShowStoreModal(false)} title="Configurar Loja">
                 <form onSubmit={handleSaveStoreWrapper} className="space-y-4">
                     <input name="name" required defaultValue={currentStore?.name} placeholder="Nome da Loja" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
-                    <input name="category" required defaultValue={currentStore?.category} placeholder="Categoria" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
+                    <select name="category" required defaultValue={currentStore?.category} className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold appearance-none">
+                        <option value="">Selecione uma Categoria</option>
+                        <option value="Autopeças">Autopeças</option>
+                        <option value="Eletrônicos">Eletrônicos</option>
+                        <option value="Vestuário">Vestuário</option>
+                        <option value="Diversos">Diversos</option>
+                        <option value="Casa e Banho">Casa e Banho</option>
+                    </select>
                     <div className="grid grid-cols-2 gap-4">
                         <input name="whatsapp" required defaultValue={currentStore?.whatsapp} placeholder="WhatsApp" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
                         <input name="email" required defaultValue={currentStore?.email} placeholder="E-mail de Contato" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />

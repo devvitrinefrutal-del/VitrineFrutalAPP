@@ -34,9 +34,9 @@ export function useData(showError: (msg: string) => void) {
         };
 
         // Carregamento em paralelo usando Fetch Nativo (Bypassing SDK Hang)
-        const [storesData, productsData, servicesData, culturalData, ordersData] = await Promise.all([
+        // Carregamento em paralelo otimizado: Produtos não são mais carregados globalmente por padrão
+        const [storesData, servicesData, culturalData, ordersData] = await Promise.all([
             fetchTable('stores'),
-            fetchTable('products'),
             fetchTable('services'),
             fetchTable('cultural_items'),
             fetchTable('orders')
@@ -47,13 +47,6 @@ export function useData(showError: (msg: string) => void) {
                 ...s,
                 ownerId: s.owner_id || s.id_do_proprietario || s.id_do_proprietário,
                 deliveryFee: s.delivery_fee || s.taxa_entrega
-            })));
-        }
-
-        if (productsData) {
-            setProducts(productsData.map((p: any) => ({
-                ...p,
-                storeId: p.store_id || p.id_da_loja
             })));
         }
 
@@ -81,6 +74,50 @@ export function useData(showError: (msg: string) => void) {
         setIsLoading(false);
     }, []);
 
+    const fetchStoreProducts = async (storeId: string) => {
+        const url = import.meta.env.VITE_SUPABASE_URL;
+        const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        try {
+            const response = await fetch(`${url}/rest/v1/products?store_id=eq.${storeId}&select=*`, {
+                headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+            });
+            if (!response.ok) throw new Error('Falha ao buscar produtos');
+            const data = await response.json();
+            const mapped = data.map((p: any) => ({ ...p, storeId: p.store_id }));
+
+            // Atualiza global state mas apenas com estes itens (ou faz merge inteligente)
+            setProducts(prev => {
+                const filtered = prev.filter(p => p.storeId !== storeId);
+                return [...filtered, ...mapped];
+            });
+            return mapped;
+        } catch (err) {
+            console.error('[ERRO PRODUCTS]', err);
+            return [];
+        }
+    };
+
+    const searchGlobal = async (query: string) => {
+        if (query.length < 3) return [];
+        const url = import.meta.env.VITE_SUPABASE_URL;
+        const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        try {
+            const response = await fetch(`${url}/rest/v1/products?name=ilike.*${query}*&select=*,stores(name)`, {
+                headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+            });
+            if (!response.ok) throw new Error('Busca falhou');
+            const data = await response.json();
+            const mapped = data.map((p: any) => ({ ...p, storeId: p.store_id, storeName: p.stores?.name }));
+            setProducts(mapped);
+            return mapped;
+        } catch (err) {
+            console.error('[ERRO SEARCH]', err);
+            return [];
+        }
+    };
+
     useEffect(() => {
         fetchData();
 
@@ -101,16 +138,14 @@ export function useData(showError: (msg: string) => void) {
                     // Notificação sonora opcional ou toast pode ser disparado aqui
                 }
             )
-            .subscribe((status) => {
-                console.log('--- [REALTIME] Status da inscrição:', status);
-            });
+            .subscribe();
 
         // Failsafe redundante
         const t = setTimeout(() => setIsLoading(false), 8000);
         return () => {
             clearTimeout(t);
             supabase.removeChannel(channel);
-        };
+        }
     }, [fetchData]);
 
     return {
@@ -119,6 +154,8 @@ export function useData(showError: (msg: string) => void) {
         loading: isLoading,
         connectionError,
         setStores, setProducts, setServices, setCulturalItems, setOrders, setStoreRatings,
-        refreshData: fetchData
+        refreshData: fetchData,
+        fetchStoreProducts,
+        searchGlobal
     };
 }

@@ -31,16 +31,22 @@ const StoreDetailsRoute = ({
   stores,
   products,
   allRatings,
-  onAddToCart
+  onAddToCart,
+  fetchStoreProducts
 }: {
   stores: Store[],
   products: Product[],
   allRatings: StoreRating[],
-  onAddToCart: (p: Product) => void
+  onAddToCart: (p: Product) => void,
+  fetchStoreProducts: (id: string) => void
 }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const store = stores.find(s => s.id === id);
+
+  useEffect(() => {
+    if (id) fetchStoreProducts(id);
+  }, [id, fetchStoreProducts]);
 
   if (!store && stores.length > 0) return <Navigate to="/" replace />;
   if (!store) return null;
@@ -219,6 +225,7 @@ function App() {
                 allRatings={data.ratings}
                 onSelectStore={(store) => { navigate(`/loja/${store.id}`); window.scrollTo(0, 0); }}
                 onAddToCart={handleAddToCart}
+                searchGlobal={data.searchGlobal}
               />
             } />
 
@@ -228,6 +235,7 @@ function App() {
                 products={data.products}
                 allRatings={data.ratings}
                 onAddToCart={handleAddToCart}
+                fetchStoreProducts={data.fetchStoreProducts}
               />
             } />
 
@@ -281,16 +289,17 @@ function App() {
                   actions={adminActions}
                   showError={showError}
                   stores={data.stores}
+                  fetchStoreProducts={data.fetchStoreProducts}
                 />
               ) : <Navigate to="/" />
             } />
 
             <Route path="/dashboard/produtos" element={
-              currentUser ? <DashboardPage user={currentUser} currentStore={currentStore} products={data.products} services={data.services} culturalItems={data.culturalItems} orders={data.orders} activeTab="PRODUCTS" onLogout={logout} actions={adminActions} showError={showError} stores={data.stores} /> : <Navigate to="/" />
+              currentUser ? <DashboardPage user={currentUser} currentStore={currentStore} products={data.products} services={data.services} culturalItems={data.culturalItems} orders={data.orders} activeTab="PRODUCTS" onLogout={logout} actions={adminActions} showError={showError} stores={data.stores} fetchStoreProducts={data.fetchStoreProducts} /> : <Navigate to="/" />
             } />
 
             <Route path="/dashboard/meus-pedidos" element={
-              currentUser ? <DashboardPage user={currentUser} currentStore={currentStore} products={data.products} services={data.services} culturalItems={data.culturalItems} orders={data.orders} activeTab="MY_ORDERS" onLogout={logout} actions={adminActions} showError={showError} stores={data.stores} /> : <Navigate to="/" />
+              currentUser ? <DashboardPage user={currentUser} currentStore={currentStore} products={data.products} services={data.services} culturalItems={data.culturalItems} orders={data.orders} activeTab="MY_ORDERS" onLogout={logout} actions={adminActions} showError={showError} stores={data.stores} fetchStoreProducts={data.fetchStoreProducts} /> : <Navigate to="/" />
             } />
 
             <Route path="*" element={<Navigate to="/" />} />
