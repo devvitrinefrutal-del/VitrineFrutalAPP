@@ -43,6 +43,9 @@ export function useCheckout(
 
         setIsFinishing(true);
         try {
+            const url = import.meta.env.VITE_SUPABASE_URL;
+            const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
             const itemsPayload = cart.map(item => ({
                 productId: item.productId,
                 name: item.name,
@@ -64,40 +67,59 @@ export function useCheckout(
                 status: 'PENDENTE',
                 total: finalTotal,
                 items: itemsPayload,
-                payment_method: paymentMethod, // Now saving payment method
-                observation: observation // Now saving observation
+                payment_method: paymentMethod,
+                observation: observation
             };
 
             console.log('Payload para DB:', newOrderDB);
 
-            const { data, error } = await supabase.from('orders').insert([newOrderDB]).select();
+            // 1. Inserir Pedido via Fetch Nativo (Resiliente)
+            const orderResponse = await fetch(`${url}/rest/v1/orders`, {
+                method: 'POST',
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(newOrderDB)
+            });
 
-            if (error) {
-                console.error('Erro Supabase:', error);
-                throw error;
-            }
+            if (!orderResponse.ok) throw new Error('Falha ao registrar pedido no banco.');
+            const orderData = await orderResponse.json();
+            console.log('Pedido criado:', orderData);
 
-            console.log('Pedido criado:', data);
-
-            // 1. Otimistic Stock Update
+            // 2. Atualizar Estoque (Fetch Nativo)
             console.log('Atualizando estoque...');
             for (const item of cart) {
                 const product = products.find(p => p.id === item.productId);
                 if (product) {
                     const newStock = Math.max(0, product.stock - item.quantity);
-                    await supabase.from('products').update({ stock: newStock }).eq('id', item.productId);
+                    await fetch(`${url}/rest/v1/products?id=eq.${item.productId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'apikey': key,
+                            'Authorization': `Bearer ${key}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ stock: newStock })
+                    });
                     setProducts(prev => prev.map(p => p.id === item.productId ? { ...p, stock: newStock } : p));
                 }
             }
 
-            // 2. Fetch Store Info for WhatsApp number
-            const { data: storeData } = await supabase.from('stores').select('whatsapp, name').eq('id', storeId).single();
+            // 3. Buscar Info da Loja (Fetch Nativo) para WhatsApp
+            const storeResponse = await fetch(`${url}/rest/v1/stores?id=eq.${storeId}&select=whatsapp,name`, {
+                headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+            });
+            const storeDataList = await storeResponse.json();
+            const storeData = storeDataList[0];
             const storePhone = storeData?.whatsapp || '';
             const storeName = storeData?.name || 'Loja';
 
-            // 3. Build WhatsApp Message
+            // 4. Build WhatsApp Message
             const itemsList = cart.map(item => `• ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
-            const deliveryTxt = deliveryMethod === 'ENTREGA' ? `🚚 *Entrega:* ${customerAddress}\n💰 *Taxa:* R$ ${deliveryFee.toFixed(2)}` : '🏪 *Retirada na Loja*';
+            const deliveryTxt = deliveryMethod === 'ENTREGA' ? `🚚 *Entrega:* ${newOrderDB.customer_address}\n💰 *Taxa:* R$ ${deliveryFee.toFixed(2)}` : '🏪 *Retirada na Loja*';
             const observationTxt = observation ? `\n📝 *OBS:* ${observation}` : '';
             const paymentTxt = `💳 *Pagamento:* ${paymentMethod}${changeFor ? ` (Troco para R$ ${changeFor})` : ''}`;
 
@@ -112,17 +134,17 @@ export function useCheckout(
                 `*TOTAL: R$ ${finalTotal.toFixed(2)}*`
             );
 
-            // 4. Finalize
+            // 5. Finalizar UI
             console.log('Processo finalizado com sucesso.');
             setShowOrderSuccess(true);
             clearCart();
 
             // Redirect to WhatsApp
             if (storePhone) {
-                setTimeout(() => {
-                    const cleanPhone = storePhone.replace(/\D/g, '');
-                    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
-                }, 1000);
+                const cleanPhone = storePhone.replace(/\D/g, '');
+                // Prefixo 55 para Brasil se não tiver
+                const finalPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+                window.open(`https://wa.me/${finalPhone}?text=${message}`, '_blank');
             }
 
             return true;

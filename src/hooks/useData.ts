@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../../supabaseClient';
 import { Store, Product, Service, CulturalItem, Order, StoreRating } from '../../types';
 
 export function useData(showError: (msg: string) => void) {
@@ -41,11 +42,6 @@ export function useData(showError: (msg: string) => void) {
             fetchTable('orders')
         ]);
 
-        console.log('[SISTEMA] Resultados recebidos:', {
-            lojas: storesData?.length,
-            produtos: productsData?.length
-        });
-
         if (storesData) {
             setStores(storesData.map((s: any) => ({
                 ...s,
@@ -84,9 +80,34 @@ export function useData(showError: (msg: string) => void) {
 
     useEffect(() => {
         fetchData();
+
+        // --- REALTIME: Notificações Internas ---
+        // Escuta novos pedidos em tempo real para o dashboard
+        const channel = supabase
+            .channel('orders_realtime')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'orders' },
+                (payload) => {
+                    console.log('--- [REALTIME] Novo pedido detectado! ---', payload);
+                    const newOrder = payload.new as any;
+                    setOrders(prev => [
+                        { ...newOrder, storeId: newOrder.store_id, createdAt: newOrder.created_at },
+                        ...prev
+                    ]);
+                    // Notificação sonora opcional ou toast pode ser disparado aqui
+                }
+            )
+            .subscribe((status) => {
+                console.log('--- [REALTIME] Status da inscrição:', status);
+            });
+
         // Failsafe redundante
         const t = setTimeout(() => setIsLoading(false), 8000);
-        return () => clearTimeout(t);
+        return () => {
+            clearTimeout(t);
+            supabase.removeChannel(channel);
+        };
     }, [fetchData]);
 
     return {
