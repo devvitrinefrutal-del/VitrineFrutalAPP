@@ -57,10 +57,16 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
     }, []);
 
     const logout = async () => {
-        await supabase.auth.signOut();
+        try {
+            await supabase.auth.signOut();
+        } catch (e) {
+            console.error('Erro ao sair do Supabase:', e);
+        }
+        localStorage.removeItem('vitrine_user');
         setCurrentUser(null);
         setRememberMe(false);
         showSuccess('Você saiu.');
+        window.location.href = '/'; // Força um reset limpo da aplicação
     };
 
     const login = async (formData: FormData) => {

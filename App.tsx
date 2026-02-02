@@ -11,6 +11,7 @@ import { useCheckout } from './src/hooks/useCheckout';
 // Components
 import { Toast } from './src/components/ui/Toast';
 import { Header } from './src/components/layout/Header';
+import { BottomNav } from './src/components/layout/BottomNav';
 import { PartyPopper, CheckCircle } from 'lucide-react';
 
 // Pages
@@ -170,7 +171,7 @@ function App() {
   // --- Render ---
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] font-sans text-gray-900 selection:bg-orange-100 selection:text-orange-900 pb-20 md:pb-0">
+    <div className="min-h-screen bg-[#FDFDFD] font-sans text-gray-900 selection:bg-orange-100 selection:text-orange-900 pb-24 md:pb-8">
 
       <Header
         activeTab={activeTab}
@@ -251,7 +252,7 @@ function App() {
                   culturalItems={data.culturalItems}
                   orders={data.orders}
                   activeTab="DASHBOARD"
-                  onLogout={() => { logout(); navigate('/'); }}
+                  onLogout={logout}
                   actions={adminActions}
                   showError={showError}
                   stores={data.stores}
@@ -260,11 +261,11 @@ function App() {
             } />
 
             <Route path="/dashboard/produtos" element={
-              currentUser ? <DashboardPage user={currentUser} currentStore={currentStore} products={data.products} services={data.services} culturalItems={data.culturalItems} orders={data.orders} activeTab="PRODUCTS" onLogout={() => { logout(); navigate('/'); }} actions={adminActions} showError={showError} stores={data.stores} /> : <Navigate to="/" />
+              currentUser ? <DashboardPage user={currentUser} currentStore={currentStore} products={data.products} services={data.services} culturalItems={data.culturalItems} orders={data.orders} activeTab="PRODUCTS" onLogout={logout} actions={adminActions} showError={showError} stores={data.stores} /> : <Navigate to="/" />
             } />
 
             <Route path="/dashboard/meus-pedidos" element={
-              currentUser ? <DashboardPage user={currentUser} currentStore={currentStore} products={data.products} services={data.services} culturalItems={data.culturalItems} orders={data.orders} activeTab="MY_ORDERS" onLogout={() => { logout(); navigate('/'); }} actions={adminActions} showError={showError} stores={data.stores} /> : <Navigate to="/" />
+              currentUser ? <DashboardPage user={currentUser} currentStore={currentStore} products={data.products} services={data.services} culturalItems={data.culturalItems} orders={data.orders} activeTab="MY_ORDERS" onLogout={logout} actions={adminActions} showError={showError} stores={data.stores} /> : <Navigate to="/" />
             } />
 
             <Route path="*" element={<Navigate to="/" />} />
@@ -310,6 +311,12 @@ function App() {
       )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
+
+      <BottomNav
+        activeTab={activeTab}
+        onTabChange={handleHeaderNavigate}
+        user={currentUser}
+      />
     </div>
   );
 }
