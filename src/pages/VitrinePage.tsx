@@ -146,7 +146,7 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
             </div>
 
             {/* Modern Categories Bar */}
-            {!hasActiveFilters && (
+            {!searchQuery && (
                 <div className="flex overflow-x-auto gap-4 pb-6 no-scrollbar -mx-4 px-4 scroll-smooth">
                     {categories.map(cat => (
                         <button
