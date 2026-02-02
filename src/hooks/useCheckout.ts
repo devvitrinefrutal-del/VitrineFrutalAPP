@@ -94,40 +94,58 @@ export function useCheckout(
             console.log('Pedido criado:', orderData);
 
             // 2. Atualizar Estoque (Fetch Nativo - Mais resiliente)
-            console.log('--- [SISTEMA] Iniciando baixa de estoque... ---');
+            console.log('--- [SISTEMA] Iniciando baixa de estoque detalhada... ---');
             for (const item of cart) {
                 try {
+                    console.log(`[ESTOQUE] Processando item: ${item.name} (${item.productId})`);
+
                     // Buscar estoque real no banco para evitar race conditions e erros de estado local
                     const prodResponse = await fetch(`${url}/rest/v1/products?id=eq.${item.productId}&select=stock`, {
                         headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
                     });
+
+                    if (!prodResponse.ok) {
+                        console.error(`[ERRO FETCH ESTOQUE] Falha ao ler estoque de ${item.name}:`, await prodResponse.text());
+                        continue;
+                    }
+
                     const prodData = await prodResponse.json();
 
                     if (prodData && prodData[0]) {
                         const currentStock = prodData[0].stock || 0;
                         const newStock = Math.max(0, currentStock - item.quantity);
 
-                        console.log(`[ESTOQUE] Produto ${item.name}: Antes ${currentStock}, Depois ${newStock}`);
+                        console.log(`[ESTOQUE] Cálculo para ${item.name}: Banco=${currentStock}, Comprado=${item.quantity} -> Novo=${newStock}`);
 
-                        await fetch(`${url}/rest/v1/products?id=eq.${item.productId}`, {
+                        const patchResponse = await fetch(`${url}/rest/v1/products?id=eq.${item.productId}`, {
                             method: 'PATCH',
                             headers: {
                                 'apikey': key,
                                 'Authorization': `Bearer ${key}`,
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'Prefer': 'return=representation'
                             },
                             body: JSON.stringify({ stock: newStock })
                         });
 
-                        // Atualiza o estado local para refletir a mudança imediatamente (se o estado estiver disponível)
-                        setProducts(prev => prev.map(p => p.id === item.productId ? { ...p, stock: newStock } : p));
+                        if (!patchResponse.ok) {
+                            const patchErrText = await patchResponse.text();
+                            console.error(`[ERRO PATCH ESTOQUE] Falha ao atualizar ${item.name}:`, patchErrText);
+                        } else {
+                            const patchedDataList = await patchResponse.json();
+                            console.log(`[ESTOQUE] Sucesso para ${item.name}:`, patchedDataList);
+
+                            // Atualiza o estado local para refletir a mudança imediatamente
+                            setProducts(prev => prev.map(p => p.id === item.productId ? { ...p, stock: newStock } : p));
+                        }
                     } else {
-                        console.warn(`[AVISO] Produto ${item.productId} não encontrado para baixa de estoque.`);
+                        console.warn(`[AVISO] Produto ${item.productId} não encontrado no banco.`);
                     }
                 } catch (stockErr) {
-                    console.error(`[ERRO ESTOQUE] Falha ao atualizar item ${item.productId}:`, stockErr);
+                    console.error(`[ERRO CRÍTICO ESTOQUE] Item ${item.productId}:`, stockErr);
                 }
             }
+            console.log('--- [SISTEMA] Finalizada baixa de estoque ---');
 
             // 3. Buscar Info da Loja (Fetch Nativo) para WhatsApp
             const storeResponse = await fetch(`${url}/rest/v1/stores?id=eq.${storeId}&select=whatsapp,name`, {
