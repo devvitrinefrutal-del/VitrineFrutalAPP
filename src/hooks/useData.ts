@@ -14,34 +14,50 @@ export function useData(showError: (msg: string) => void) {
     const [connectionError, setConnectionError] = useState(false);
 
     const fetchData = useCallback(async () => {
-        console.log('--- [DEBUG] Início fetchData ---');
+        console.log('--- [SISTEMA] Iniciando busca de dados... ---');
         setIsLoading(true);
         setConnectionError(false);
+
         try {
+            // 1. Lojas (Essencial)
             console.log('Buscando lojas...');
-            const { data: storesD, error: storesE } = await supabase.from('stores').select('*');
-            if (storesE) throw storesE;
-            if (storesD) setStores(storesD.map(s => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
+            const { data: sD, error: sE } = await supabase.from('stores').select('*');
+            if (sE) {
+                console.error("Erro ao carregar lojas:", sE);
+                setConnectionError(true);
+            } else {
+                console.log(`Lojas encontradas: ${sD?.length || 0}`);
+                if (sD) setStores(sD.map(s => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
+            }
 
+            // 2. Produtos (Essencial)
             console.log('Buscando produtos...');
-            const { data: productsD } = await supabase.from('products').select('*');
-            if (productsD) setProducts(productsD.map(p => ({ ...p, storeId: p.store_id })));
+            const { data: pD, error: pE } = await supabase.from('products').select('*');
+            if (pE) console.error("Erro ao carregar produtos:", pE);
+            else if (pD) {
+                console.log(`Produtos encontrados: ${pD.length}`);
+                setProducts(pD.map(p => ({ ...p, storeId: p.store_id })));
+            }
 
-            console.log('Buscando serviços...');
-            const { data: servicesD } = await supabase.from('services').select('*');
-            if (servicesD) setServices(servicesD.map(s => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate })));
+            // 3. Serviços
+            const { data: svcD } = await supabase.from('services').select('*');
+            if (svcD) setServices(svcD.map(s => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate })));
 
-            console.log('Buscando cultural...');
+            // 4. Cultural
             const { data: cultD } = await supabase.from('cultural_items').select('*');
             if (cultD) setCulturalItems(cultD);
 
-            console.log('Buscando avaliações...');
+            // 5. Avaliações
             const { data: ratD } = await supabase.from('store_ratings').select('*');
             if (ratD) setStoreRatings(ratD.map(r => ({ ...r, storeId: r.store_id, orderId: r.order_id, clientId: r.client_id, createdAt: r.created_at })));
 
+            // 6. Pedidos (Pode falhar se o SQL não foi rodado)
             console.log('Buscando pedidos...');
-            const { data: ordD } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-            if (ordD) {
+            const { data: ordD, error: ordE } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+            if (ordE) {
+                console.warn("Aviso: Não foi possível carregar pedidos (provavelmente as colunas novas faltam no DB):", ordE.message);
+            } else if (ordD) {
+                console.log(`Pedidos encontrados: ${ordD.length}`);
                 setOrders(ordD.map(o => ({
                     ...o,
                     storeId: o.store_id,
@@ -55,13 +71,12 @@ export function useData(showError: (msg: string) => void) {
                     createdAt: o.created_at
                 })));
             }
-            console.log('--- [DEBUG] Sucesso total ---');
+
+            console.log('--- [SISTEMA] Busca de dados finalizada ---');
         } catch (err: any) {
-            console.error("Erro no fetchData:", err);
-            setConnectionError(true);
-            showError('Erro ao carregar dados: ' + err.message);
+            console.error("Erro inesperado no fluxo de dados:", err);
+            showError('Erro de conexão crítica: ' + err.message);
         } finally {
-            console.log('--- [DEBUG] Fim fetchData ---');
             setIsLoading(false);
         }
     }, [showError]);
