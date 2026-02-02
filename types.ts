@@ -26,6 +26,8 @@ export interface Store {
   email: string;
   cnpj: string;
   deliveryFee?: number;
+  dailyRevenueAdj?: number;
+  monthlyRevenueAdj?: number;
 }
 
 export interface Product {

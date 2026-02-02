@@ -147,6 +147,8 @@ export function useAdminActions(
                 cnpj: (formData.get('cnpj') as string || '').toString(),
                 email: (rawEmail as string || '').toString().trim().toLowerCase(),
                 delivery_fee: parseFloat(rawDeliveryFee as string) || 0,
+                daily_revenue_adj: parseFloat(formData.get('dailyRevenueAdj') as string) || editingStore?.dailyRevenueAdj || 0,
+                monthly_revenue_adj: parseFloat(formData.get('monthlyRevenueAdj') as string) || editingStore?.monthlyRevenueAdj || 0,
                 image: image || editingStore?.image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
             };
 
@@ -156,7 +158,13 @@ export function useAdminActions(
                 const { error } = await supabase.from('stores').update(data).eq('id', editingStore.id);
                 if (error) throw error;
 
-                setters.setStores(prev => prev.map(s => s.id === editingStore.id ? { ...s, ...data, deliveryFee: data.delivery_fee } : s));
+                setters.setStores(prev => prev.map(s => s.id === editingStore.id ? {
+                    ...s,
+                    ...data,
+                    deliveryFee: data.delivery_fee,
+                    dailyRevenueAdj: data.daily_revenue_adj,
+                    monthlyRevenueAdj: data.monthly_revenue_adj
+                } : s));
                 showSuccess('Loja atualizada!');
             } else {
                 const { data: saved, error } = await supabase.from('stores').insert([data]).select();

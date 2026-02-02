@@ -222,34 +222,99 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
                 {/* LOJISTA: STOCK (Simplified Table) */}
                 {user.role === 'LOJISTA' && section === 'STOCK' && (
-                    <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden">
-                        <h3 className="text-lg font-black text-black mb-6 tracking-widest text-xs uppercase">Inventário</h3>
-                        {/* Table simplified for brevity, similar to original but cleaner */}
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left min-w-[500px]">
-                                <thead>
-                                    <tr className="border-b border-gray-100 text-[9px] font-black uppercase text-gray-400 tracking-widest">
-                                        <th className="pb-4">Produto</th>
-                                        <th className="pb-4 text-center">Preço</th>
-                                        <th className="pb-4 text-center">Estoque</th>
-                                        <th className="pb-4 text-right">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {products.filter(p => p.storeId === currentStore?.id).map(p => (
-                                        <tr key={p.id} className="group hover:bg-gray-50">
-                                            <td className="py-4 font-black text-xs uppercase">{p.name}</td>
-                                            <td className="py-4 text-center text-xs font-bold">R$ {p.price.toFixed(2)}</td>
-                                            <td className="py-4 text-center text-xs font-bold">{p.stock}</td>
-                                            <td className="py-4 text-right">
-                                                <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${p.stock < 5 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-                                                    {p.stock < 5 ? 'Baixo' : 'Ok'}
-                                                </span>
-                                            </td>
+                    <div className="space-y-6">
+                        {/* Finance Summary Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
+                                    <ShoppingBag size={12} className="text-orange-500" /> Inventário Total
+                                </h4>
+                                <p className="text-2xl font-black text-black">
+                                    R$ {products.filter(p => p.storeId === currentStore?.id)
+                                        .reduce((acc, p) => acc + (p.price * p.stock), 0)
+                                        .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </p>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm relative group">
+                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
+                                    <DollarSign size={12} className="text-green-500" /> Faturado Hoje
+                                </h4>
+                                <p className="text-2xl font-black text-green-600">
+                                    R$ {(() => {
+                                        const today = new Date().toISOString().split('T')[0];
+                                        const ordersToday = orders.filter(o =>
+                                            o.storeId === currentStore?.id &&
+                                            o.status === 'ENTREGUE' &&
+                                            o.createdAt.startsWith(today)
+                                        );
+                                        const revenue = ordersToday.reduce((acc, o) => acc + o.total, 0);
+                                        return (revenue + (currentStore?.dailyRevenueAdj || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                                    })()}
+                                </p>
+                                <button
+                                    onClick={() => alert('Em breve: Ajuste manual direto no banco de dados.')}
+                                    className="absolute top-4 right-4 text-[8px] font-black uppercase text-gray-300 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    Ajustar
+                                </button>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm relative group">
+                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
+                                    <Calendar size={12} className="text-blue-500" /> Faturado no Mês
+                                </h4>
+                                <p className="text-2xl font-black text-blue-600">
+                                    R$ {(() => {
+                                        const now = new Date();
+                                        const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                                        const ordersMonth = orders.filter(o =>
+                                            o.storeId === currentStore?.id &&
+                                            o.status === 'ENTREGUE' &&
+                                            o.createdAt.startsWith(month)
+                                        );
+                                        const revenue = ordersMonth.reduce((acc, o) => acc + o.total, 0);
+                                        return (revenue + (currentStore?.monthlyRevenueAdj || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                                    })()}
+                                </p>
+                                <button
+                                    onClick={() => alert('Em breve: Ajuste manual direto no banco de dados.')}
+                                    className="absolute top-4 right-4 text-[8px] font-black uppercase text-gray-300 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    Ajustar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden">
+                            <h3 className="text-lg font-black text-black mb-6 tracking-widest text-xs uppercase">Inventário Detalhado</h3>
+                            {/* Table simplified for brevity, similar to original but cleaner */}
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left min-w-[500px]">
+                                    <thead>
+                                        <tr className="border-b border-gray-100 text-[9px] font-black uppercase text-gray-400 tracking-widest">
+                                            <th className="pb-4">Produto</th>
+                                            <th className="pb-4 text-center">Preço</th>
+                                            <th className="pb-4 text-center">Estoque</th>
+                                            <th className="pb-4 text-right">Status</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50">
+                                        {products.filter(p => p.storeId === currentStore?.id).map(p => (
+                                            <tr key={p.id} className="group hover:bg-gray-50">
+                                                <td className="py-4 font-black text-xs uppercase">{p.name}</td>
+                                                <td className="py-4 text-center text-xs font-bold">R$ {p.price.toFixed(2)}</td>
+                                                <td className="py-4 text-center text-xs font-bold">{p.stock}</td>
+                                                <td className="py-4 text-right">
+                                                    <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${p.stock < 5 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                                                        {p.stock < 5 ? 'Baixo' : 'Ok'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )}
