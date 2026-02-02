@@ -65,10 +65,18 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
 
     // Filter Logic - Local for stores, global search already happened for products
     const filteredProducts = products.filter(p => {
+        const store = stores.find(s => s.id === p.storeId);
+        if (!store) return false;
+
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesMinPrice = priceRange.min ? p.price >= parseFloat(priceRange.min) : true;
         const matchesMaxPrice = priceRange.max ? p.price <= parseFloat(priceRange.max) : true;
-        return matchesSearch && matchesMinPrice && matchesMaxPrice;
+
+        const matchesCategory = selectedCategory === 'Todas' || store.category === selectedCategory;
+        const matchesNeighborhood = selectedNeighborhood === 'Todos' || store.neighborhood === selectedNeighborhood;
+        const matchesDelivery = !onlyDelivery || store.hasDelivery;
+
+        return matchesSearch && matchesMinPrice && matchesMaxPrice && matchesCategory && matchesNeighborhood && matchesDelivery;
     });
 
     const filteredStores = stores.filter(s => {
