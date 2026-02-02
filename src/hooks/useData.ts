@@ -14,76 +14,35 @@ export function useData(showError: (msg: string) => void) {
     const [connectionError, setConnectionError] = useState(false);
 
     const fetchData = useCallback(async () => {
-        console.log('--- [DEBUG] Iniciando fetchData otimizado ---');
+        console.log('--- [DEBUG] Início fetchData ---');
         setIsLoading(true);
         setConnectionError(false);
-
         try {
-            // Executa todas as buscas em paralelo para máxima performance
-            const [
-                storesRes,
-                productsRes,
-                servicesRes,
-                culturalRes,
-                ratingsRes,
-                ordersRes
-            ] = await Promise.all([
-                supabase.from('stores').select('*'),
-                supabase.from('products').select('*'),
-                supabase.from('services').select('*'),
-                supabase.from('cultural_items').select('*'),
-                supabase.from('store_ratings').select('*'),
-                supabase.from('orders').select('*').order('created_at', { ascending: false })
-            ]);
+            console.log('Buscando lojas...');
+            const { data: storesD, error: storesE } = await supabase.from('stores').select('*');
+            if (storesE) throw storesE;
+            if (storesD) setStores(storesD.map(s => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
 
-            // Verifica erros críticos (Lojas e Produtos são essenciais)
-            if (storesRes.error) throw storesRes.error;
+            console.log('Buscando produtos...');
+            const { data: productsD } = await supabase.from('products').select('*');
+            if (productsD) setProducts(productsD.map(p => ({ ...p, storeId: p.store_id })));
 
-            // Processa Lojas
-            if (storesRes.data) {
-                setStores(storesRes.data.map(s => ({
-                    ...s,
-                    ownerId: s.owner_id,
-                    deliveryFee: s.delivery_fee
-                })));
-            }
+            console.log('Buscando serviços...');
+            const { data: servicesD } = await supabase.from('services').select('*');
+            if (servicesD) setServices(servicesD.map(s => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate })));
 
-            // Processa Produtos
-            if (productsRes.data) {
-                setProducts(productsRes.data.map(p => ({
-                    ...p,
-                    storeId: p.store_id
-                })));
-            }
+            console.log('Buscando cultural...');
+            const { data: cultD } = await supabase.from('cultural_items').select('*');
+            if (cultD) setCulturalItems(cultD);
 
-            // Processa Serviços
-            if (servicesRes.data) {
-                setServices(servicesRes.data.map(s => ({
-                    ...s,
-                    providerId: s.provider_id,
-                    priceEstimate: s.price_estimate
-                })));
-            }
+            console.log('Buscando avaliações...');
+            const { data: ratD } = await supabase.from('store_ratings').select('*');
+            if (ratD) setStoreRatings(ratD.map(r => ({ ...r, storeId: r.store_id, orderId: r.order_id, clientId: r.client_id, createdAt: r.created_at })));
 
-            // Processa Itens Culturais
-            if (culturalRes.data) {
-                setCulturalItems(culturalRes.data);
-            }
-
-            // Processa Avaliações
-            if (ratingsRes.data) {
-                setStoreRatings(ratingsRes.data.map(r => ({
-                    ...r,
-                    storeId: r.store_id,
-                    orderId: r.order_id,
-                    clientId: r.client_id,
-                    createdAt: r.created_at
-                })));
-            }
-
-            // Processa Pedidos
-            if (ordersRes.data) {
-                setOrders(ordersRes.data.map(o => ({
+            console.log('Buscando pedidos...');
+            const { data: ordD } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+            if (ordD) {
+                setOrders(ordD.map(o => ({
                     ...o,
                     storeId: o.store_id,
                     clientId: o.client_id,
@@ -92,29 +51,23 @@ export function useData(showError: (msg: string) => void) {
                     customerAddress: o.customer_address,
                     deliveryMethod: o.delivery_method,
                     deliveryFee: o.delivery_fee,
-                    paymentMethod: o.payment_method,
-                    observation: o.observation,
                     dispatchedAt: o.dispatched_at,
                     createdAt: o.created_at
                 })));
             }
-
-            console.log('--- [DEBUG] Dados carregados com sucesso! ---');
+            console.log('--- [DEBUG] Sucesso total ---');
         } catch (err: any) {
-            console.error("Erro crítico ao buscar dados do Supabase:", err);
+            console.error("Erro no fetchData:", err);
             setConnectionError(true);
-            showError('Erro de conexão: Verifique se o banco está ativo.');
+            showError('Erro ao carregar dados: ' + err.message);
         } finally {
-            console.log('--- [DEBUG] Finalizando estado de carregamento ---');
+            console.log('--- [DEBUG] Fim fetchData ---');
             setIsLoading(false);
         }
     }, [showError]);
 
     useEffect(() => {
         fetchData();
-        const handleOnline = () => { setConnectionError(false); fetchData(); };
-        window.addEventListener('online', handleOnline);
-        return () => window.removeEventListener('online', handleOnline);
     }, [fetchData]);
 
     return {
