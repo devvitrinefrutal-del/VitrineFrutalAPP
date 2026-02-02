@@ -23,6 +23,7 @@ import { CulturalDetailPage } from './src/pages/CulturalDetailPage';
 import { CheckoutPage } from './src/pages/CheckoutPage';
 import { DashboardPage } from './src/pages/DashboardPage';
 import { AuthPage } from './src/pages/AuthPage';
+import { ServiceDetailsPage } from './src/pages/ServiceDetailsPage';
 
 // --- Route Wrappers ---
 
@@ -75,6 +76,26 @@ const CulturalDetailRoute = ({
   );
 };
 
+const ServiceDetailsRoute = ({
+  services
+}: {
+  services: Service[]
+}) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const service = services.find(s => s.id === id);
+
+  if (!service && services.length > 0) return <Navigate to="/servicos" replace />;
+  if (!service) return null;
+
+  return (
+    <ServiceDetailsPage
+      service={service}
+      onBack={() => navigate('/servicos')}
+    />
+  );
+};
+
 // --- Main App ---
 
 function App() {
@@ -109,7 +130,7 @@ function App() {
   const getActiveTab = (path: string) => {
     if (path === '/') return 'VITRINE';
     if (path.startsWith('/loja/')) return 'VITRINE';
-    if (path === '/servicos') return 'SERVICOS';
+    if (path.startsWith('/servicos')) return 'SERVICOS';
     if (path.startsWith('/cultural')) return 'CULTURAL';
     if (path === '/checkout') return 'CHECKOUT';
     if (path.startsWith('/dashboard')) return 'DASHBOARD';
@@ -213,8 +234,12 @@ function App() {
             <Route path="/servicos" element={
               <ServicesPage
                 services={data.services}
-                onSelectService={(s) => { }}
+                onSelectService={(service) => { navigate(`/servicos/${service.id}`); window.scrollTo(0, 0); }}
               />
+            } />
+
+            <Route path="/servicos/:id" element={
+              <ServiceDetailsRoute services={data.services} />
             } />
 
             <Route path="/cultural" element={
