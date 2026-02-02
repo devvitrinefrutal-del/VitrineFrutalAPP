@@ -14,53 +14,45 @@ export function useData(showError: (msg: string) => void) {
     const [connectionError, setConnectionError] = useState(false);
 
     const fetchData = useCallback(async () => {
-        console.log('--- [DIAGNÓSTICO] Iniciando teste de conexão... ---');
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        console.log('--- [DIAGNÓSTICO CRÍTICO] ---');
+        console.log('URL DO BANCO:', supabaseUrl);
 
-        // 1. Teste de Conectividade Bruta (Fetch)
-        fetch(import.meta.env.VITE_SUPABASE_URL + '/rest/v1/', {
-            headers: { 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY }
-        })
-            .then(r => console.log('--- [DIAGNÓSTICO] Resposta bruta do Supabase:', r.status))
-            .catch(e => console.error('--- [DIAGNÓSTICO] Falha total de rede:', e));
-
-        const safetyTimeout = setTimeout(() => {
-            setIsLoading(false);
-            console.warn('--- [SISTEMA] Timeout atingido. Forçando renderização. ---');
-        }, 8000); // Aumentado para 8s para dar chance a conexões lentas
+        setIsLoading(true);
 
         try {
-            // Busca de Lojas
-            supabase.from('stores').select('*').then(({ data, error }) => {
-                if (error) console.error("Erro TB Lojas:", error);
-                else {
-                    console.log(`Lojas ok: ${data?.length}`);
-                    if (data) setStores(data.map(s => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
-                }
-            });
+            // Teste 1: Buscar do catálogo de tabelas para ver se 'stores' existe
+            const { data: tables, error: tErr } = await supabase.from('stores').select('count', { count: 'exact', head: true });
+            console.log('Teste de existência da tabela "stores":', { count: tables, error: tErr });
+
+            // Busca de Lojas com log do JSON bruto
+            const { data: sD, error: sE } = await supabase.from('stores').select('*');
+            if (sE) console.error("ERRO LOJAS:", sE);
+            else {
+                console.log("DADOS BRUTOS LOJAS:", sD);
+                if (sD) setStores(sD.map(s => ({ ...s, ownerId: s.owner_id || s.id_do_proprietário, deliveryFee: s.delivery_fee || s.taxa_entrega })));
+            }
 
             // Busca de Produtos
-            supabase.from('products').select('*').then(({ data, error }) => {
-                if (error) console.error("Erro TB Produtos:", error);
-                else if (data) setProducts(data.map(p => ({ ...p, storeId: p.store_id })));
-            });
+            const { data: pD, error: pE } = await supabase.from('products').select('*');
+            if (pE) console.error("ERRO PRODUTOS:", pE);
+            else if (pD) setProducts(pD.map(p => ({ ...p, storeId: p.store_id || p.id_da_loja })));
 
-            // Outras buscas... (simplificadas para diagnóstico)
+            // Outras buscas... (mantendo a independência)
             supabase.from('services').select('*').then(({ data }) => data && setServices(data.map(s => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate }))));
             supabase.from('cultural_items').select('*').then(({ data }) => data && setCulturalItems(data));
-            supabase.from('orders').select('*').order('created_at', { ascending: false }).then(({ data, error }) => {
-                if (error) console.warn("Erro TB Pedidos (SQL?):", error.message);
-                else if (data) setOrders(data.map(o => ({ ...o, storeId: o.store_id, clientId: o.client_id, customerName: o.customer_name, customerPhone: o.customer_phone, customerAddress: o.customer_address, deliveryMethod: o.delivery_method, deliveryFee: o.delivery_fee, dispatchedAt: o.dispatched_at, createdAt: o.created_at })));
-            });
+            supabase.from('orders').select('*').order('created_at', { ascending: false }).then(({ data }) => data && setOrders(data.map(o => ({ ...o, storeId: o.store_id, createdAt: o.created_at }))));
 
         } catch (err: any) {
-            console.error("Erro fatal:", err);
+            console.error("ERRO NO FETCHDATA:", err);
+            setConnectionError(true);
+        } finally {
+            setIsLoading(false);
         }
     }, []);
 
     useEffect(() => {
         fetchData();
-        const t = setTimeout(() => setIsLoading(false), 1000);
-        return () => clearTimeout(t);
     }, [fetchData]);
 
     return {
