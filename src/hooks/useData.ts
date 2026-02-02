@@ -17,32 +17,36 @@ export function useData(showError: (msg: string) => void) {
         const url = import.meta.env.VITE_SUPABASE_URL;
         const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-        console.log('--- [REDES] Iniciando teste de conectividade bruta... ---');
+        console.log('--- [REDES] Iniciando Diagnóstico de Supabase... ---');
+        console.log('[REDES] URL Alvo:', url);
 
-        // TESTE DE CONEXÃO DIRETA (Sem o SDK do Supabase)
-        fetch(`${url}/rest/v1/stores?select=*`, {
-            headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
-        })
-            .then(r => console.log('--- [REDES] Resposta direta da API (Status):', r.status))
-            .catch(e => console.error('--- [REDES] Falha crítica de REDE (Fetch):', e));
+        // TESTE 1: Ping via Fetch Nativo (Ignora o SDK)
+        fetch(`${url}/rest/v1/`, { method: 'OPTIONS' })
+            .then(r => console.log('--- [REDES] Resposta OPTIONS ok (Server está vivo):', r.status))
+            .catch(e => console.error('--- [REDES] Falha de OPTIONS (Servidor Offline ou Bloqueado):', e));
 
         setIsLoading(true);
 
-        // BUSCA VIA SDK
+        // BUSCA DE LOJAS (Tentando capturar qualquer sinal)
+        console.log('[DETETIVE] Pedindo lojas...');
         supabase.from('stores').select('*').then(({ data, error }) => {
-            if (error) console.error("[SDK] Erro Lojas:", error);
-            else {
-                console.log(`[SDK] Lojas recebidas: ${data?.length || 0}`);
-                if (data) setStores(data.map(s => ({ ...s, ownerId: s.owner_id || s.id_do_proprietario, deliveryFee: s.total_entrega || s.delivery_fee })));
+            if (error) {
+                console.error("[DETETIVE] Erro retornado pelo SDK:", error);
+            } else {
+                console.log(`[DETETIVE] Resposta recebida! Quantidade: ${data?.length || 0}`);
+                if (data) setStores(data.map(s => ({
+                    ...s,
+                    ownerId: s.owner_id || s.id_do_proprietario || s.id_do_proprietário,
+                    deliveryFee: s.delivery_fee || s.taxa_entrega
+                })));
             }
-        });
+        }).catch(err => console.error("[DETETIVE] Catch fatal no SDK:", err));
 
-        supabase.from('products').select('*').then(({ data, error }) => {
-            if (data) setProducts(data.map(p => ({ ...p, storeId: p.store_id || p.id_da_loja })));
-        });
-
-        // Timeout para não travar a tela
-        setTimeout(() => setIsLoading(false), 4000);
+        // Timeout para liberar a tela e permitir navegar (Debug)
+        setTimeout(() => {
+            setIsLoading(false);
+            console.warn('--- [REDES] O carregamento "desistiu" de esperar o Supabase após 5s. ---');
+        }, 5000);
     }, []);
 
     useEffect(() => {
