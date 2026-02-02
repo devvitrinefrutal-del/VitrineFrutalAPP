@@ -126,36 +126,74 @@ export function useAdminActions(
     };
 
     const saveStore = async (formData: FormData, image: string | null, editingStore: Store | null) => {
-        console.log('--- [SISTEMA] Iniciando saveStore... ---');
+        console.log('--- [SISTEMA] Iniciando saveStore Inteligente... ---');
         try {
-            const rawEmail = formData.get('email');
-            const rawWhatsapp = formData.get('whatsapp');
-            const rawName = formData.get('name');
-            const rawCategory = formData.get('category');
-            const rawAddress = formData.get('address');
-            const rawDeliveryFee = formData.get('deliveryFee');
-
-            console.log('[DEBUG saveStore] Campos Brutos:', {
-                rawEmail, rawWhatsapp, rawName, rawCategory, rawAddress, rawDeliveryFee
-            });
-
-            const data: any = {
-                name: (rawName as string || '').toString(),
-                category: (rawCategory as string || '').toString(),
-                whatsapp: normalizeWhatsApp(rawWhatsapp as string || ''),
-                address: (rawAddress as string || '').toString(),
-                cnpj: (formData.get('cnpj') as string || '').toString(),
-                email: (rawEmail as string || '').toString().trim().toLowerCase(),
-                delivery_fee: parseFloat(rawDeliveryFee as string) || 0,
-                daily_revenue_adj: parseFloat(formData.get('dailyRevenueAdj') as string) || editingStore?.dailyRevenueAdj || 0,
-                neighborhood: formData.get('neighborhood') as string || editingStore?.neighborhood || '',
-                has_delivery: formData.get('hasDelivery') === 'true',
-                latitude: parseFloat(formData.get('latitude') as string) || null,
-                longitude: parseFloat(formData.get('longitude') as string) || null,
-                image: image || editingStore?.image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
+            const getField = (name: string) => {
+                const val = formData.get(name);
+                if (val === null || val === undefined) return undefined;
+                return val;
             };
 
-            console.log('[DEBUG saveStore] Dados Processados:', data);
+            // Construir payload apenas com o que foi enviado ou manter o que já existe
+            const data: any = {};
+
+            // Campos Básicos
+            const name = getField('name');
+            if (name !== undefined) data.name = name.toString();
+            else if (editingStore) data.name = editingStore.name;
+
+            const category = getField('category');
+            if (category !== undefined) data.category = category.toString();
+            else if (editingStore) data.category = editingStore.category;
+
+            const whatsapp = getField('whatsapp');
+            if (whatsapp !== undefined) data.whatsapp = normalizeWhatsApp(whatsapp.toString());
+            else if (editingStore) data.whatsapp = editingStore.whatsapp;
+
+            const address = getField('address');
+            if (address !== undefined) data.address = address.toString();
+            else if (editingStore) data.address = editingStore.address;
+
+            const cnpj = getField('cnpj');
+            if (cnpj !== undefined) data.cnpj = cnpj.toString();
+            else if (editingStore) data.cnpj = editingStore.cnpj;
+
+            const email = getField('email');
+            if (email !== undefined) data.email = email.toString().trim().toLowerCase();
+            else if (editingStore) data.email = editingStore.email;
+
+            // Campos de Configuração
+            const deliveryFee = getField('deliveryFee');
+            if (deliveryFee !== undefined) data.delivery_fee = parseFloat(deliveryFee as string) || 0;
+            else if (editingStore) data.delivery_fee = editingStore.deliveryFee;
+
+            const neighborhood = getField('neighborhood');
+            if (neighborhood !== undefined) data.neighborhood = neighborhood.toString();
+            else if (editingStore) data.neighborhood = editingStore.neighborhood;
+
+            const hasDelivery = getField('hasDelivery');
+            if (hasDelivery !== undefined) data.has_delivery = hasDelivery === 'true';
+            else if (editingStore) data.has_delivery = editingStore.hasDelivery;
+
+            // Campos Financeiros e Imagem
+            const dailyRevenueAdj = getField('dailyRevenueAdj');
+            if (dailyRevenueAdj !== undefined) data.daily_revenue_adj = parseFloat(dailyRevenueAdj as string) || 0;
+
+            const monthlyRevenueAdj = getField('monthlyRevenueAdj');
+            if (monthlyRevenueAdj !== undefined) data.monthly_revenue_adj = parseFloat(monthlyRevenueAdj as string) || 0;
+
+            const lastFinanceUpdate = getField('lastFinanceUpdate');
+            if (lastFinanceUpdate !== undefined) data.last_finance_update = lastFinanceUpdate.toString();
+
+            const latitude = getField('latitude');
+            if (latitude !== undefined) data.latitude = parseFloat(latitude as string) || null;
+
+            const longitude = getField('longitude');
+            if (longitude !== undefined) data.longitude = parseFloat(longitude as string) || null;
+
+            data.image = image || editingStore?.image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800';
+
+            console.log('[DEBUG saveStore] Payload Final:', data);
 
             if (editingStore) {
                 const { error } = await supabase.from('stores').update(data).eq('id', editingStore.id);
@@ -164,20 +202,27 @@ export function useAdminActions(
                 setters.setStores(prev => prev.map(s => s.id === editingStore.id ? {
                     ...s,
                     ...data,
-                    deliveryFee: data.delivery_fee,
-                    neighborhood: data.neighborhood,
-                    hasDelivery: data.has_delivery,
-                    latitude: data.latitude,
-                    longitude: data.longitude,
-                    dailyRevenueAdj: data.daily_revenue_adj,
-                    monthlyRevenueAdj: data.monthly_revenue_adj
+                    deliveryFee: data.delivery_fee !== undefined ? data.delivery_fee : s.deliveryFee,
+                    neighborhood: data.neighborhood !== undefined ? data.neighborhood : s.neighborhood,
+                    hasDelivery: data.has_delivery !== undefined ? data.has_delivery : s.hasDelivery,
+                    latitude: data.latitude !== undefined ? data.latitude : s.latitude,
+                    longitude: data.longitude !== undefined ? data.longitude : s.longitude,
+                    dailyRevenueAdj: data.daily_revenue_adj !== undefined ? data.daily_revenue_adj : s.dailyRevenueAdj,
+                    monthlyRevenueAdj: data.monthly_revenue_adj !== undefined ? data.monthly_revenue_adj : s.monthlyRevenueAdj,
+                    lastFinanceUpdate: data.last_finance_update !== undefined ? data.last_finance_update : s.lastFinanceUpdate
                 } : s));
                 showSuccess('Loja atualizada!');
             } else {
                 const { data: saved, error } = await supabase.from('stores').insert([data]).select();
                 if (error) throw error;
                 if (saved) {
-                    setters.setStores(prev => [...prev, { ...saved[0], deliveryFee: saved[0].delivery_fee, ownerId: saved[0].owner_id }]);
+                    setters.setStores(prev => [...prev, {
+                        ...saved[0],
+                        deliveryFee: saved[0].delivery_fee,
+                        ownerId: saved[0].owner_id,
+                        neighborhood: saved[0].neighborhood,
+                        hasDelivery: saved[0].has_delivery
+                    }]);
                 }
                 showSuccess('Nova loja criada!');
             }
