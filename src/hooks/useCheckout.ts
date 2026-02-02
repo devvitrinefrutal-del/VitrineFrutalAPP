@@ -58,7 +58,7 @@ export function useCheckout(
 
             const newOrderDB = {
                 store_id: storeId,
-                client_id: user.id,
+                customer_id: user.id,
                 customer_name: user.name,
                 customer_phone: user.phone || 'Não informado',
                 customer_address: deliveryMethod === 'ENTREGA' ? (customerAddress || user.address) : 'Retirada na Loja',

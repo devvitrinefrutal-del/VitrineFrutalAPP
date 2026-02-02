@@ -356,18 +356,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                         <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm mb-6">
                             <h3 className="text-xl font-black text-black tracking-tight uppercase tracking-widest text-xs">Meus Pedidos</h3>
                         </div>
-                        {orders.filter(o => o.clientId === user.id).length === 0 ? (
+                        {orders.filter(o => o.customerId === user.id).length === 0 ? (
                             <div className="py-20 text-center bg-gray-50 rounded-[3rem]">
                                 <ShoppingBag size={48} className="mx-auto text-gray-300 mb-4" />
                                 <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Nenhum pedido realizado</p>
                             </div>
                         ) : (
-                            orders.filter(o => o.clientId === user.id).map(o => (
+                            orders.filter(o => o.customerId === user.id).map(o => (
                                 <div key={o.id} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm mb-4">
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
                                             <p className="font-black text-black text-xs uppercase tracking-tighter mb-1">Pedido #{o.id.slice(0, 8)}</p>
-                                            <p className="text-[9px] text-gray-400 font-bold">{new Date(o.created_at || Date.now()).toLocaleDateString()}</p>
+                                            <p className="text-[9px] text-gray-400 font-bold">{new Date(o.createdAt || Date.now()).toLocaleDateString()}</p>
                                         </div>
                                         <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${o.status === 'ENTREGUE' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>
                                             {o.status}

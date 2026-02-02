@@ -70,6 +70,7 @@ export function useData(showError: (msg: string) => void) {
             setOrders(ordersData.map((o: any) => ({
                 ...o,
                 storeId: o.store_id,
+                customerId: o.customer_id,
                 createdAt: o.created_at
             })));
         }

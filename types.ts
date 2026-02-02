@@ -74,7 +74,7 @@ export interface CulturalItem {
 export interface Order {
   id: string;
   storeId: string;
-  clientId: string;
+  customerId: string;
   customerName: string;
   customerPhone: string;
   customerAddress?: string;
@@ -98,7 +98,7 @@ export interface StoreRating {
   id: string;
   storeId: string;
   orderId: string;
-  clientId: string;
+  customerId: string;
   rating: number; // 1-5
   comment?: string;
   createdAt: string;
