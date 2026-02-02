@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../supabaseClient';
 import { Store, Product, Service, CulturalItem, Order, StoreRating } from '../../types';
 
 export function useData(showError: (msg: string) => void) {
@@ -13,54 +12,81 @@ export function useData(showError: (msg: string) => void) {
     const [isLoading, setIsLoading] = useState(false);
     const [connectionError, setConnectionError] = useState(false);
 
-    const fetchData = useCallback(() => {
+    const fetchData = useCallback(async () => {
         const url = import.meta.env.VITE_SUPABASE_URL;
         const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-        console.log('--- [REDES] Iniciando Diagnóstico de Supabase... ---');
-        console.log('[REDES] URL Alvo:', url);
-
-        // TESTE 1: Ping via Fetch Nativo (Ignora o SDK)
-        fetch(`${url}/rest/v1/`, { method: 'OPTIONS' })
-            .then(r => console.log('--- [REDES] Resposta OPTIONS ok (Server está vivo):', r.status))
-            .catch(e => console.error('--- [REDES] Falha de OPTIONS (Servidor Offline ou Bloqueado):', e));
-
+        console.log('--- [SISTEMA] Iniciando Carregamento Resiliente V5 ---');
         setIsLoading(true);
 
-        // BUSCA DE LOJAS (Tentando capturar qualquer sinal)
-        console.log('[DETETIVE] Pedindo lojas via SDK...');
-        supabase.from('stores').select('*').then(({ data, error }) => {
-            if (error) {
-                console.error("[DETETIVE] Erro retornado pelo SDK:", error);
-            } else {
-                console.log(`[DETETIVE] Resposta SDK recebida! Quantidade: ${data?.length || 0}`);
-                if (data) setStores(data.map(s => ({
-                    ...s,
-                    ownerId: s.owner_id || s.id_do_proprietario || s.id_do_proprietário,
-                    deliveryFee: s.delivery_fee || s.taxa_entrega
-                })));
+        const fetchTable = async (table: string) => {
+            try {
+                const response = await fetch(`${url}/rest/v1/${table}?select=*`, {
+                    headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+                });
+                if (!response.ok) throw new Error(`Status: ${response.status}`);
+                return await response.json();
+            } catch (err) {
+                console.error(`[ERRO NATIVO] Tabela ${table}:`, err);
+                return null;
             }
-        }).catch(err => console.error("[DETETIVE] Catch fatal no SDK:", err));
+        };
 
-        // TESTE 2: Fetch Nativo GET (Vê se o problema é o SDK)
-        fetch(`${url}/rest/v1/stores?select=*`, {
-            headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
-        })
-            .then(async r => {
-                const raw = await r.json();
-                console.log('--- [REDES] DADOS BRUTOS (NATIVO):', raw);
-            })
-            .catch(e => console.error('--- [REDES] Falha no Fetch Nativo GET:', e));
+        // Carregamento em paralelo usando Fetch Nativo (Bypassing SDK Hang)
+        const [storesData, productsData, servicesData, culturalData, ordersData] = await Promise.all([
+            fetchTable('stores'),
+            fetchTable('products'),
+            fetchTable('services'),
+            fetchTable('cultural_items'),
+            fetchTable('orders')
+        ]);
 
-        // Timeout para liberar a tela e permitir navegar (Debug)
-        setTimeout(() => {
-            setIsLoading(false);
-            console.warn('--- [REDES] O carregamento "desistiu" de esperar o Supabase após 5s. ---');
-        }, 5000);
+        console.log('[SISTEMA] Resultados recebidos:', {
+            lojas: storesData?.length,
+            produtos: productsData?.length
+        });
+
+        if (storesData) {
+            setStores(storesData.map((s: any) => ({
+                ...s,
+                ownerId: s.owner_id || s.id_do_proprietario || s.id_do_proprietário,
+                deliveryFee: s.delivery_fee || s.taxa_entrega
+            })));
+        }
+
+        if (productsData) {
+            setProducts(productsData.map((p: any) => ({
+                ...p,
+                storeId: p.store_id || p.id_da_loja
+            })));
+        }
+
+        if (servicesData) {
+            setServices(servicesData.map((s: any) => ({
+                ...s,
+                providerId: s.provider_id,
+                priceEstimate: s.price_estimate
+            })));
+        }
+
+        if (culturalData) setCulturalItems(culturalData);
+
+        if (ordersData) {
+            setOrders(ordersData.map((o: any) => ({
+                ...o,
+                storeId: o.store_id,
+                createdAt: o.created_at
+            })));
+        }
+
+        setIsLoading(false);
     }, []);
 
     useEffect(() => {
         fetchData();
+        // Failsafe redundante
+        const t = setTimeout(() => setIsLoading(false), 8000);
+        return () => clearTimeout(t);
     }, [fetchData]);
 
     return {
