@@ -71,6 +71,12 @@ export function useData(showError: (msg: string) => void) {
                 ...o,
                 storeId: o.store_id,
                 customerId: o.customer_id,
+                customerName: o.customer_name,
+                customerPhone: o.customer_phone,
+                customerAddress: o.customer_address,
+                paymentMethod: o.payment_method,
+                deliveryMethod: o.delivery_method,
+                deliveryFee: o.delivery_fee,
                 createdAt: o.created_at
             })));
         }
