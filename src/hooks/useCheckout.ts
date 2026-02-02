@@ -93,22 +93,39 @@ export function useCheckout(
             const orderData = await orderResponse.json();
             console.log('Pedido criado:', orderData);
 
-            // 2. Atualizar Estoque (Fetch Nativo)
-            console.log('Atualizando estoque...');
+            // 2. Atualizar Estoque (Fetch Nativo - Mais resiliente)
+            console.log('--- [SISTEMA] Iniciando baixa de estoque... ---');
             for (const item of cart) {
-                const product = products.find(p => p.id === item.productId);
-                if (product) {
-                    const newStock = Math.max(0, product.stock - item.quantity);
-                    await fetch(`${url}/rest/v1/products?id=eq.${item.productId}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'apikey': key,
-                            'Authorization': `Bearer ${key}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ stock: newStock })
+                try {
+                    // Buscar estoque real no banco para evitar race conditions e erros de estado local
+                    const prodResponse = await fetch(`${url}/rest/v1/products?id=eq.${item.productId}&select=stock`, {
+                        headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
                     });
-                    setProducts(prev => prev.map(p => p.id === item.productId ? { ...p, stock: newStock } : p));
+                    const prodData = await prodResponse.json();
+
+                    if (prodData && prodData[0]) {
+                        const currentStock = prodData[0].stock || 0;
+                        const newStock = Math.max(0, currentStock - item.quantity);
+
+                        console.log(`[ESTOQUE] Produto ${item.name}: Antes ${currentStock}, Depois ${newStock}`);
+
+                        await fetch(`${url}/rest/v1/products?id=eq.${item.productId}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'apikey': key,
+                                'Authorization': `Bearer ${key}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ stock: newStock })
+                        });
+
+                        // Atualiza o estado local para refletir a mudança imediatamente (se o estado estiver disponível)
+                        setProducts(prev => prev.map(p => p.id === item.productId ? { ...p, stock: newStock } : p));
+                    } else {
+                        console.warn(`[AVISO] Produto ${item.productId} não encontrado para baixa de estoque.`);
+                    }
+                } catch (stockErr) {
+                    console.error(`[ERRO ESTOQUE] Falha ao atualizar item ${item.productId}:`, stockErr);
                 }
             }
 
