@@ -13,60 +13,65 @@ export function useData(showError: (msg: string) => void) {
     const [isLoading, setIsLoading] = useState(false);
     const [connectionError, setConnectionError] = useState(false);
 
-    const fetchData = useCallback(async () => {
-        console.log('--- [PASSO 1] Iniciando busca... ---');
+    const fetchData = useCallback(() => {
+        console.log('--- [SISTEMA] Disparando buscas em paralelo... ---');
         setIsLoading(true);
 
-        try {
-            // BUSCA DE LOJAS
-            console.log('--- [PASSO 2] Solicitando LOJAS ao Supabase... ---');
-            const { data: sD, error: sE } = await supabase.from('stores').select('*');
-
-            if (sE) {
-                console.error("--- [PASSO 2.1] ERRO AO BUSCAR LOJAS:", sE);
-                setConnectionError(true);
-            } else {
-                console.log("--- [PASSO 2.2] LOJAS RECEBIDAS (Bruto):", sD);
-                if (sD && sD.length > 0) {
-                    setStores(sD.map(s => ({
+        // 1. BUSCA DE LOJAS (Não bloqueante)
+        console.log('[JOBS] Iniciando busca de LOJAS...');
+        supabase.from('stores').select('*')
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error("[ERRO] Falha ao ler LOJAS:", error);
+                    setConnectionError(true);
+                } else if (data) {
+                    console.log(`[SUCESSO] LOJAS encontradas: ${data.length}`);
+                    setStores(data.map(s => ({
                         ...s,
                         ownerId: s.owner_id || s.id_do_proprietario || s.id_do_proprietário,
                         deliveryFee: s.delivery_fee || s.taxa_entrega
                     })));
                 } else {
-                    console.warn("--- [PASSO 2.3] Apenas lista vazia retornada para LOJAS.");
+                    console.warn("[AVISO] LOJAS retornou vazio.");
                 }
-            }
+            })
+            .catch(err => console.error("[CRÍTICO] Falha total na requisição de LOJAS:", err));
 
-            // BUSCA DE PRODUTOS
-            console.log('--- [PASSO 3] Solicitando PRODUTOS... ---');
-            const { data: pD, error: pE } = await supabase.from('products').select('*');
-            if (pE) console.error("ERRO PRODUTOS:", pE);
-            else if (pD) setProducts(pD.map(p => ({ ...p, storeId: p.store_id || p.id_da_loja })));
+        // 2. BUSCA DE PRODUTOS (Não bloqueante)
+        console.log('[JOBS] Iniciando busca de PRODUTOS...');
+        supabase.from('products').select('*')
+            .then(({ data, error }) => {
+                if (error) console.error("[ERRO] Falha ao ler PRODUTOS:", error);
+                else if (data) {
+                    console.log(`[SUCESSO] PRODUTOS encontrados: ${data.length}`);
+                    setProducts(data.map(p => ({ ...p, storeId: p.store_id || p.id_da_loja })));
+                }
+            })
+            .catch(err => console.error("[CRÍTICO] Falha total na requisição de PRODUTOS:", err));
 
-            // OUTROS (Serviços, Cultural, Pedidos)
-            console.log('--- [PASSO 4] Solicitando demais tabelas... ---');
-            supabase.from('services').select('*').then(({ data }) => data && setServices(data.map(s => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate }))));
-            supabase.from('cultural_items').select('*').then(({ data }) => data && setCulturalItems(data));
-            supabase.from('orders').select('*').order('created_at', { ascending: false }).then(({ data }) => data && setOrders(data.map(o => ({ ...o, storeId: o.store_id, createdAt: o.created_at }))));
+        // 3. OUTROS (Serviços, Cultural, Pedidos)
+        supabase.from('services').select('*').then(({ data }) => {
+            if (data) setServices(data.map(s => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate })));
+        });
 
-        } catch (err: any) {
-            console.error("--- [ERRO FATAL] ---", err);
-        } finally {
-            console.log('--- [PASSO FINAL] Finalizando carregamento. ---');
+        supabase.from('cultural_items').select('*').then(({ data }) => {
+            if (data) setCulturalItems(data);
+        });
+
+        supabase.from('orders').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+            if (data) setOrders(data.map(o => ({ ...o, storeId: o.store_id, createdAt: o.created_at })));
+        });
+
+        // Liberação do Loader após um tempo seguro para permitir renderização inicial
+        setTimeout(() => {
             setIsLoading(false);
-        }
-    }, [showError]);
+            console.log('--- [SISTEMA] Liberação de tela concluída (Timeout Seguro). ---');
+        }, 3000);
+
+    }, []);
 
     useEffect(() => {
         fetchData();
-
-        // Failsafe de 5 segundos para nunca travar o usuário
-        const timeout = setTimeout(() => {
-            setIsLoading(false);
-        }, 5000);
-
-        return () => clearTimeout(timeout);
     }, [fetchData]);
 
     return {
