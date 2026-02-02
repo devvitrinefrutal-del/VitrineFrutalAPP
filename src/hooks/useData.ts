@@ -14,60 +14,35 @@ export function useData(showError: (msg: string) => void) {
     const [connectionError, setConnectionError] = useState(false);
 
     const fetchData = useCallback(() => {
-        console.log('--- [SISTEMA] Disparando buscas em paralelo... ---');
+        const url = import.meta.env.VITE_SUPABASE_URL;
+        const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+        console.log('--- [REDES] Iniciando teste de conectividade bruta... ---');
+
+        // TESTE DE CONEXÃO DIRETA (Sem o SDK do Supabase)
+        fetch(`${url}/rest/v1/stores?select=*`, {
+            headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+        })
+            .then(r => console.log('--- [REDES] Resposta direta da API (Status):', r.status))
+            .catch(e => console.error('--- [REDES] Falha crítica de REDE (Fetch):', e));
+
         setIsLoading(true);
 
-        // 1. BUSCA DE LOJAS (Não bloqueante)
-        console.log('[JOBS] Iniciando busca de LOJAS...');
-        supabase.from('stores').select('*')
-            .then(({ data, error }) => {
-                if (error) {
-                    console.error("[ERRO] Falha ao ler LOJAS:", error);
-                    setConnectionError(true);
-                } else if (data) {
-                    console.log(`[SUCESSO] LOJAS encontradas: ${data.length}`);
-                    setStores(data.map(s => ({
-                        ...s,
-                        ownerId: s.owner_id || s.id_do_proprietario || s.id_do_proprietário,
-                        deliveryFee: s.delivery_fee || s.taxa_entrega
-                    })));
-                } else {
-                    console.warn("[AVISO] LOJAS retornou vazio.");
-                }
-            })
-            .catch(err => console.error("[CRÍTICO] Falha total na requisição de LOJAS:", err));
-
-        // 2. BUSCA DE PRODUTOS (Não bloqueante)
-        console.log('[JOBS] Iniciando busca de PRODUTOS...');
-        supabase.from('products').select('*')
-            .then(({ data, error }) => {
-                if (error) console.error("[ERRO] Falha ao ler PRODUTOS:", error);
-                else if (data) {
-                    console.log(`[SUCESSO] PRODUTOS encontrados: ${data.length}`);
-                    setProducts(data.map(p => ({ ...p, storeId: p.store_id || p.id_da_loja })));
-                }
-            })
-            .catch(err => console.error("[CRÍTICO] Falha total na requisição de PRODUTOS:", err));
-
-        // 3. OUTROS (Serviços, Cultural, Pedidos)
-        supabase.from('services').select('*').then(({ data }) => {
-            if (data) setServices(data.map(s => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate })));
+        // BUSCA VIA SDK
+        supabase.from('stores').select('*').then(({ data, error }) => {
+            if (error) console.error("[SDK] Erro Lojas:", error);
+            else {
+                console.log(`[SDK] Lojas recebidas: ${data?.length || 0}`);
+                if (data) setStores(data.map(s => ({ ...s, ownerId: s.owner_id || s.id_do_proprietario, deliveryFee: s.total_entrega || s.delivery_fee })));
+            }
         });
 
-        supabase.from('cultural_items').select('*').then(({ data }) => {
-            if (data) setCulturalItems(data);
+        supabase.from('products').select('*').then(({ data, error }) => {
+            if (data) setProducts(data.map(p => ({ ...p, storeId: p.store_id || p.id_da_loja })));
         });
 
-        supabase.from('orders').select('*').order('created_at', { ascending: false }).then(({ data }) => {
-            if (data) setOrders(data.map(o => ({ ...o, storeId: o.store_id, createdAt: o.created_at })));
-        });
-
-        // Liberação do Loader após um tempo seguro para permitir renderização inicial
-        setTimeout(() => {
-            setIsLoading(false);
-            console.log('--- [SISTEMA] Liberação de tela concluída (Timeout Seguro). ---');
-        }, 3000);
-
+        // Timeout para não travar a tela
+        setTimeout(() => setIsLoading(false), 4000);
     }, []);
 
     useEffect(() => {
