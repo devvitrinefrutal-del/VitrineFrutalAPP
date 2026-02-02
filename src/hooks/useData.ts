@@ -14,27 +14,76 @@ export function useData(showError: (msg: string) => void) {
     const [connectionError, setConnectionError] = useState(false);
 
     const fetchData = useCallback(async () => {
+        console.log('--- [DEBUG] Iniciando fetchData otimizado ---');
         setIsLoading(true);
+        setConnectionError(false);
+
         try {
-            const { data: storesData, error: storesError } = await supabase.from('stores').select('*');
-            if (storesError) throw storesError;
-            if (storesData) setStores(storesData.map(s => ({ ...s, ownerId: s.owner_id, deliveryFee: s.delivery_fee })));
+            // Executa todas as buscas em paralelo para máxima performance
+            const [
+                storesRes,
+                productsRes,
+                servicesRes,
+                culturalRes,
+                ratingsRes,
+                ordersRes
+            ] = await Promise.all([
+                supabase.from('stores').select('*'),
+                supabase.from('products').select('*'),
+                supabase.from('services').select('*'),
+                supabase.from('cultural_items').select('*'),
+                supabase.from('store_ratings').select('*'),
+                supabase.from('orders').select('*').order('created_at', { ascending: false })
+            ]);
 
-            const { data: productsData } = await supabase.from('products').select('*');
-            if (productsData) setProducts(productsData.map(p => ({ ...p, storeId: p.store_id })));
+            // Verifica erros críticos (Lojas e Produtos são essenciais)
+            if (storesRes.error) throw storesRes.error;
 
-            const { data: servicesData } = await supabase.from('services').select('*');
-            if (servicesData) setServices(servicesData.map(s => ({ ...s, providerId: s.provider_id, priceEstimate: s.price_estimate })));
+            // Processa Lojas
+            if (storesRes.data) {
+                setStores(storesRes.data.map(s => ({
+                    ...s,
+                    ownerId: s.owner_id,
+                    deliveryFee: s.delivery_fee
+                })));
+            }
 
-            const { data: culturalData } = await supabase.from('cultural_items').select('*');
-            if (culturalData) setCulturalItems(culturalData);
+            // Processa Produtos
+            if (productsRes.data) {
+                setProducts(productsRes.data.map(p => ({
+                    ...p,
+                    storeId: p.store_id
+                })));
+            }
 
-            const { data: ratingsData } = await supabase.from('store_ratings').select('*');
-            if (ratingsData) setStoreRatings(ratingsData.map(r => ({ ...r, storeId: r.store_id, orderId: r.order_id, clientId: r.client_id, createdAt: r.created_at })));
+            // Processa Serviços
+            if (servicesRes.data) {
+                setServices(servicesRes.data.map(s => ({
+                    ...s,
+                    providerId: s.provider_id,
+                    priceEstimate: s.price_estimate
+                })));
+            }
 
-            const { data: ordersData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-            if (ordersData) {
-                setOrders(ordersData.map(o => ({
+            // Processa Itens Culturais
+            if (culturalRes.data) {
+                setCulturalItems(culturalRes.data);
+            }
+
+            // Processa Avaliações
+            if (ratingsRes.data) {
+                setStoreRatings(ratingsRes.data.map(r => ({
+                    ...r,
+                    storeId: r.store_id,
+                    orderId: r.order_id,
+                    clientId: r.client_id,
+                    createdAt: r.created_at
+                })));
+            }
+
+            // Processa Pedidos
+            if (ordersRes.data) {
+                setOrders(ordersRes.data.map(o => ({
                     ...o,
                     storeId: o.store_id,
                     clientId: o.client_id,
@@ -48,12 +97,13 @@ export function useData(showError: (msg: string) => void) {
                 })));
             }
 
-            setConnectionError(false);
+            console.log('--- [DEBUG] Dados carregados com sucesso! ---');
         } catch (err: any) {
-            console.error("Erro ao buscar dados:", err);
+            console.error("Erro crítico ao buscar dados do Supabase:", err);
             setConnectionError(true);
-            showError('Erro de conexão com o servidor.');
+            showError('Erro de conexão: Verifique se o banco está ativo.');
         } finally {
+            console.log('--- [DEBUG] Finalizando estado de carregamento ---');
             setIsLoading(false);
         }
     }, [showError]);
