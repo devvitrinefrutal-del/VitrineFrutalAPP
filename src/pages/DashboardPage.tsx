@@ -449,6 +449,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     <input name="category" required defaultValue={currentStore?.category} placeholder="Categoria" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
                     <div className="grid grid-cols-2 gap-4">
                         <input name="whatsapp" required defaultValue={currentStore?.whatsapp} placeholder="WhatsApp" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
+                        <input name="email" required defaultValue={currentStore?.email} placeholder="E-mail de Contato" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Taxa de Entrega (R$)</label>
                         <input name="deliveryFee" type="number" step="0.50" defaultValue={currentStore?.deliveryFee} placeholder="Taxa Entrega" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
                     </div>
                     <textarea name="address" required defaultValue={currentStore?.address} placeholder="Endereço Completo" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold h-24 resize-none" />
@@ -462,7 +466,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <form onSubmit={handleSaveServiceWrapper} className="space-y-4">
                     <input name="name" required defaultValue={editingService?.name} placeholder="Nome do Serviço" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
                     <input name="type" required defaultValue={editingService?.type} placeholder="Tipo (ex: Encanador)" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
-                    <input name="priceEstimate" required defaultValue={editingService?.priceEstimate} placeholder="Estimativa de Preço" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
+                    <div className="grid grid-cols-2 gap-4">
+                        <input name="priceEstimate" required defaultValue={editingService?.priceEstimate} placeholder="Estimativa de Preço" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
+                        <input name="email" required defaultValue={editingService?.email} placeholder="E-mail Profissional" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
+                    </div>
                     <textarea name="description" required defaultValue={editingService?.description} placeholder="Descrição" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold h-24 resize-none" />
                     <MultiImageInput max={3} initialImages={modalImages} onImagesChange={setModalImages} showError={showError} />
                     <button className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase tracking-widest text-xs">Salvar Serviço</button>

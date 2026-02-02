@@ -133,7 +133,7 @@ export function useAdminActions(
                 whatsapp: normalizeWhatsApp(formData.get('whatsapp') as string),
                 address: formData.get('address') as string,
                 cnpj: formData.get('cnpj') as string,
-                email: (formData.get('email') as string).trim().toLowerCase(),
+                email: (formData.get('email') as string || '').trim().toLowerCase(),
                 delivery_fee: parseFloat(formData.get('deliveryFee') as string) || 0,
                 image: image || editingStore?.image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
             };
@@ -166,7 +166,7 @@ export function useAdminActions(
                 type: formData.get('type') as string,
                 whatsapp: normalizeWhatsApp(formData.get('whatsapp') as string),
                 address: formData.get('address') as string,
-                email: (formData.get('email') as string).trim().toLowerCase(),
+                email: (formData.get('email') as string || '').trim().toLowerCase(),
                 description: formData.get('description') as string,
                 price_estimate: formData.get('priceEstimate') as string,
                 image: images[0] || editingService?.image || 'https://images.unsplash.com/photo-1581578731522-745d05ad9a2d?w=400&h=300&fit=crop',
