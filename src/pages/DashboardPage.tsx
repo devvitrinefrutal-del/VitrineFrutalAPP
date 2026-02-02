@@ -540,27 +540,79 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
             {/* Store Modal (Inline for now) */}
             <Modal isOpen={showStoreModal} onClose={() => setShowStoreModal(false)} title="Configurar Loja">
-                <form onSubmit={handleSaveStoreWrapper} className="space-y-4">
-                    <input name="name" required defaultValue={currentStore?.name} placeholder="Nome da Loja" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
-                    <select name="category" required defaultValue={currentStore?.category} className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold appearance-none">
-                        <option value="">Selecione uma Categoria</option>
-                        <option value="Autopeças">Autopeças</option>
-                        <option value="Eletrônicos">Eletrônicos</option>
-                        <option value="Vestuário">Vestuário</option>
-                        <option value="Diversos">Diversos</option>
-                        <option value="Casa e Banho">Casa e Banho</option>
-                    </select>
-                    <div className="grid grid-cols-2 gap-4">
-                        <input name="whatsapp" required defaultValue={currentStore?.whatsapp} placeholder="WhatsApp" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
-                        <input name="email" required defaultValue={currentStore?.email} placeholder="E-mail de Contato" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
-                    </div>
+                <form onSubmit={handleSaveStoreWrapper} className="space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Taxa de Entrega (R$)</label>
-                        <input name="deliveryFee" type="number" step="0.50" defaultValue={currentStore?.deliveryFee} placeholder="Taxa Entrega" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Nome da Loja</label>
+                        <input name="name" required defaultValue={currentStore?.name} placeholder="Nome da Loja" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold focus:ring-2 ring-orange-100 transition-all text-sm" />
                     </div>
-                    <textarea name="address" required defaultValue={currentStore?.address} placeholder="Endereço Completo" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold h-24 resize-none" />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Categoria</label>
+                            <select name="category" required defaultValue={currentStore?.category} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
+                                <option value="">Escolha...</option>
+                                <option value="Moda e Acessórios">Moda e Acessórios</option>
+                                <option value="Casa e Decoração">Casa e Decoração</option>
+                                <option value="Tecnologia e Eletrônicos">Tecnologia e Eletrônicos</option>
+                                <option value="Beleza e Cuidados Pessoais">Beleza e Cuidados Pessoais</option>
+                                <option value="Construção e Ferramentas">Construção e Ferramentas</option>
+                                <option value="Saúde e Bem-Estar">Saúde e Bem-Estar</option>
+                                <option value="Agro e Pet">Agro e Pet</option>
+                                <option value="Veículos e Autopeças">Veículos e Autopeças</option>
+                                <option value="Papelaria e Presentes">Papelaria e Presentes</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Bairro</label>
+                            <select name="bairro" required defaultValue={currentStore?.bairro} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
+                                <option value="">Escolha...</option>
+                                <option value="Centro">Centro</option>
+                                <option value="Ipê">Ipê</option>
+                                <option value="Nossa Senhora do Carmo">Nossa Senhora do Carmo</option>
+                                <option value="Princesa Isabel">Princesa Isabel</option>
+                                <option value="Vila Esperança">Vila Esperança</option>
+                                <option value="Novo Horizonte">Novo Horizonte</option>
+                                <option value="Progresso">Progresso</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">WhatsApp</label>
+                            <input name="whatsapp" required defaultValue={currentStore?.whatsapp} placeholder="WhatsApp" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Delivery</label>
+                            <select name="hasDelivery" required defaultValue={currentStore?.hasDelivery?.toString()} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
+                                <option value="true">Sim, entregamos</option>
+                                <option value="false">Não fazemos entrega</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Taxa de Entrega (R$)</label>
+                            <input name="deliveryFee" type="number" step="0.50" defaultValue={currentStore?.deliveryFee} placeholder="Taxa Entrega" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">E-mail</label>
+                            <input name="email" required defaultValue={currentStore?.email} placeholder="E-mail" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Endereço Completo</label>
+                        <textarea name="address" required defaultValue={currentStore?.address} placeholder="Endereço Completo" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold h-24 resize-none text-sm focus:ring-2 ring-orange-100 transition-all" />
+                    </div>
+
                     <MultiImageInput max={1} initialImages={modalImages} onImagesChange={setModalImages} showError={showError} />
-                    <button className="w-full py-4 bg-orange-500 text-white font-black rounded-2xl uppercase tracking-widest text-xs">Salvar Alterações</button>
+
+                    <button className="w-full py-5 bg-orange-500 text-white font-black rounded-[2rem] uppercase tracking-widest text-[10px] shadow-xl shadow-orange-100 active:scale-95 transition-all">
+                        Salvar Configurações
+                    </button>
                 </form>
             </Modal>
 

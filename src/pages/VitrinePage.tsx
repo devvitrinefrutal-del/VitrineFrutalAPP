@@ -29,8 +29,22 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
     const [priceRange, setPriceRange] = useState<{ min: string, max: string }>({ min: '', max: '' });
 
     const categories = [
-        'Todas', 'Autopeças', 'Eletrônicos', 'Vestuário', 'Diversos', 'Casa e Banho'
+        { name: 'Todas', icon: '🏪' },
+        { name: 'Moda e Acessórios', icon: '👕' },
+        { name: 'Casa e Decoração', icon: '🏠' },
+        { name: 'Tecnologia e Eletrônicos', icon: '💻' },
+        { name: 'Beleza e Cuidados Pessoais', icon: '💄' },
+        { name: 'Construção e Ferramentas', icon: '🏗️' },
+        { name: 'Saúde e Bem-Estar', icon: '💊' },
+        { name: 'Agro e Pet', icon: '🐾' },
+        { name: 'Veículos e Autopeças', icon: '🚗' },
+        { name: 'Papelaria e Presentes', icon: '🎁' }
     ];
+
+    const [selectedBairro, setSelectedBairro] = useState('Todos');
+    const [onlyDelivery, setOnlyDelivery] = useState(false);
+
+    const bairros = ['Todos', 'Centro', 'Ipê', 'Nossa Senhora do Carmo', 'Princesa Isabel', 'Vila Esperança', 'Novo Horizonte', 'Progresso'];
 
     const handleSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -52,11 +66,13 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
 
     const filteredStores = stores.filter(s => {
         const matchesCategory = selectedCategory === 'Todas' || s.category === selectedCategory;
+        const matchesBairro = selectedBairro === 'Todos' || s.bairro === selectedBairro;
+        const matchesDelivery = !onlyDelivery || s.hasDelivery;
         const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
+        return matchesCategory && matchesBairro && matchesDelivery && matchesSearch;
     });
 
-    const hasActiveFilters = searchQuery.length > 0 || priceRange.min !== '' || priceRange.max !== '' || selectedCategory !== 'Todas';
+    const hasActiveFilters = searchQuery.length > 0 || priceRange.min !== '' || priceRange.max !== '' || selectedCategory !== 'Todas' || selectedBairro !== 'Todos' || onlyDelivery;
 
     return (
         <div className="space-y-8 animate-in fade-in pb-20">
@@ -81,7 +97,7 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
                         </p>
                     </div>
 
-                    <div className="w-full max-w-2xl bg-white p-2 rounded-2xl flex shadow-2xl shadow-green-900/50 relative z-20">
+                    <div className="w-full max-w-2xl bg-white p-2 rounded-2xl flex flex-col md:flex-row shadow-2xl shadow-green-900/50 relative z-20 gap-2">
                         <div className="flex-1 flex items-center px-4 gap-3">
                             <Search className="text-gray-400" size={20} />
                             <input
@@ -91,44 +107,59 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
                                 className="w-full py-3 bg-transparent outline-none font-bold text-gray-700 placeholder-gray-400"
                             />
                         </div>
-                        <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className={`px-6 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-2 transition-all ${hasActiveFilters ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                        >
-                            <Filter size={16} /> Filtros
-                        </button>
+                        <div className="flex items-center gap-2 px-2">
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={`flex-1 md:flex-none px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 transition-all ${hasActiveFilters ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                            >
+                                <Filter size={16} /> Filtros
+                            </button>
+                        </div>
                     </div>
 
                     {showFilters && (
-                        <div className="w-full max-w-2xl bg-white p-6 rounded-3xl shadow-xl animate-in slide-in-from-top-4 flex flex-col md:flex-row gap-6 items-end">
-                            <div className="flex-1 w-full grid grid-cols-2 gap-4">
+                        <div className="w-full max-w-2xl bg-white p-6 rounded-3xl shadow-xl animate-in slide-in-from-top-4 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-2">Preço Mín.</label>
-                                    <input type="number" value={priceRange.min} onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })} className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold text-sm" placeholder="R$ 0,00" />
+                                    <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-2">Bairro</label>
+                                    <select value={selectedBairro} onChange={(e) => setSelectedBairro(e.target.value)} className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold text-sm appearance-none">
+                                        {bairros.map(b => <option key={b} value={b}>{b}</option>)}
+                                    </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-2">Preço Máx.</label>
+                                    <label className="text-[9px] font-black uppercase text-gray-400 tracking-widest ml-2">Preço Máximo</label>
                                     <input type="number" value={priceRange.max} onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })} className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold text-sm" placeholder="R$ Máximo" />
                                 </div>
                             </div>
-                            <button onClick={() => { setSearchQuery(''); setPriceRange({ min: '', max: '' }); setShowFilters(false); }} className="w-full md:w-auto px-6 py-4 bg-red-50 text-red-500 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-red-100 transition-colors">
-                                Limpar
-                            </button>
+                            <div className="flex items-center justify-between">
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input type="checkbox" checked={onlyDelivery} onChange={(e) => setOnlyDelivery(e.target.checked)} className="w-5 h-5 rounded-lg border-gray-200 text-orange-500 focus:ring-orange-500" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">Apenas quem faz Delivery</span>
+                                </label>
+                                <button onClick={() => { setSearchQuery(''); setSelectedCategory('Todas'); setSelectedBairro('Todos'); setOnlyDelivery(false); setPriceRange({ min: '', max: '' }); setShowFilters(false); }} className="px-6 py-3 bg-red-50 text-red-500 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-red-100 transition-colors">
+                                    Limpar Tudo
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Categories Bar */}
+            {/* Modern Categories Bar */}
             {!hasActiveFilters && (
-                <div className="flex overflow-x-auto gap-3 pb-4 no-scrollbar -mx-4 px-4 scroll-smooth">
+                <div className="flex overflow-x-auto gap-4 pb-6 no-scrollbar -mx-4 px-4 scroll-smooth">
                     {categories.map(cat => (
                         <button
-                            key={cat}
-                            onClick={() => setSelectedCategory(cat)}
-                            className={`whitespace-nowrap px-6 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${selectedCategory === cat ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'bg-white border border-gray-100 text-gray-400 hover:border-orange-200'}`}
+                            key={cat.name}
+                            onClick={() => setSelectedCategory(cat.name)}
+                            className={`flex flex-col items-center gap-2 group min-w-[100px] transition-all`}
                         >
-                            {cat}
+                            <div className={`w-16 h-16 rounded-[1.5rem] flex items-center justify-center text-2xl shadow-sm transition-all border ${selectedCategory === cat.name ? 'bg-orange-500 border-orange-400 text-white scale-110 shadow-orange-100' : 'bg-white border-gray-100 group-hover:border-orange-200'}`}>
+                                {cat.icon}
+                            </div>
+                            <span className={`text-[9px] font-black uppercase tracking-tighter text-center leading-tight transition-colors ${selectedCategory === cat.name ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-600'}`}>
+                                {cat.name.split(' ').map((word, i) => <span key={i} className="block">{word}</span>)}
+                            </span>
                         </button>
                     ))}
                 </div>

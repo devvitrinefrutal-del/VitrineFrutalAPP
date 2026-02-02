@@ -26,6 +26,8 @@ export interface Store {
   email: string;
   cnpj: string;
   deliveryFee?: number;
+  bairro?: string;
+  hasDelivery?: boolean;
   dailyRevenueAdj?: number;
   monthlyRevenueAdj?: number;
   lastFinanceUpdate?: string; // ISO Date para controle de resets
