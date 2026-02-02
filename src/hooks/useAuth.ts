@@ -31,23 +31,29 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         }
     }, [currentUser, rememberMe]);
 
+    // Helper for native profile fetch
+    const fetchProfileNativo = async (userId: string) => {
+        const url = import.meta.env.VITE_SUPABASE_URL;
+        const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        try {
+            const res = await fetch(`${url}/rest/v1/profiles?id=eq.${userId}&select=*`, {
+                headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+            });
+            const data = await res.json();
+            return data[0] || null;
+        } catch (e) {
+            console.error('[AUTH] Erro ao buscar perfil nativo:', e);
+            return null;
+        }
+    };
+
     // Supabase Auth Listener
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
-                // Only fetch if strictly necessary to avoid loops, but here we need role updates
-                const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                const profile = await fetchProfileNativo(session.user.id);
                 if (profile) {
-                    // Check for auto-links
-                    const { data: storeMatch } = await supabase.from('stores').select('id').eq('email', session.user.email).maybeSingle();
-                    const { data: serviceMatch } = await supabase.from('services').select('id').eq('email', session.user.email).maybeSingle();
-
-                    const enrichedProfile = {
-                        ...profile,
-                        storeId: profile.role === 'LOJISTA' ? storeMatch?.id : undefined,
-                        serviceId: profile.role === 'PRESTADOR' ? serviceMatch?.id : undefined
-                    };
-                    setCurrentUser(enrichedProfile);
+                    setCurrentUser(profile);
                 }
             } else if (event === 'SIGNED_OUT') {
                 setCurrentUser(null);
@@ -66,7 +72,7 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         setCurrentUser(null);
         setRememberMe(false);
         showSuccess('Você saiu.');
-        window.location.href = '/'; // Força um reset limpo da aplicação
+        window.location.href = '/';
     };
 
     const login = async (formData: FormData) => {
@@ -74,80 +80,51 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         const password = (formData.get('password') as string).trim();
         const isAuthorizedDev = email === 'devvitrinefrutal@gmail.com';
 
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        console.log('--- [AUTH] Iniciando login... ---');
 
-        if (error) {
-            showError(error.message.includes('Invalid login') ? 'E-mail ou senha incorretos.' : error.message);
-            return;
-        }
-
-        // Logic for profile/dev check...
-        let { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
-
-        // DEV Logic injection
-        if (isAuthorizedDev && (!profile || profile.role !== 'DEV')) {
-            // Auto-promote or create DEV
-            // Simplified for hook... implementation details handled in backend/listener mostly, 
-            // but here we mimic App.tsx explicitly for safety
-            if (!profile) {
-                const newDev = { id: data.user.id, name: 'Desenvolvedor Master', email, role: 'DEV', phone: '', document: '', address: '' };
-                await supabase.from('profiles').insert([newDev]);
-                profile = newDev;
-            } else {
-                await supabase.from('profiles').update({ role: 'DEV' }).eq('id', data.user.id);
-                profile.role = 'DEV';
-            }
-        }
-
-        if (profile) {
-            if (profile.role === 'DEV' && !isAuthorizedDev) {
-                showError('Acesso Negado: Não é DEV autorizado.');
-                await supabase.auth.signOut();
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                console.error('[AUTH] Erro Auth:', error.message);
+                showError(error.message.includes('Invalid login') ? 'E-mail ou senha incorretos.' : error.message);
                 return;
             }
 
-            // Link Stores logic
-            const { data: storeMatch } = await supabase.from('stores').select('id, owner_id').eq('email', email).maybeSingle();
-            const { data: serviceMatch } = await supabase.from('services').select('id, provider_id').eq('email', email).maybeSingle();
+            console.log('[AUTH] Logado com sucesso! Buscando perfil...');
+            let profile = await fetchProfileNativo(data.user.id);
 
-            if (storeMatch && !storeMatch.owner_id) {
-                await supabase.from('profiles').update({ role: 'LOJISTA' }).eq('id', profile.id);
-                await supabase.from('stores').update({ owner_id: profile.id }).eq('id', storeMatch.id);
-                profile.role = 'LOJISTA';
-                profile.storeId = storeMatch.id;
-                showSuccess('Sua loja foi vinculada!');
-            } else if (serviceMatch && !serviceMatch.provider_id) {
-                await supabase.from('profiles').update({ role: 'PRESTADOR' }).eq('id', profile.id);
-                await supabase.from('services').update({ provider_id: profile.id }).eq('id', serviceMatch.id);
-                profile.role = 'PRESTADOR';
-                profile.serviceId = serviceMatch.id;
-                showSuccess('Seu perfil profissional foi vinculado!');
-            } else if (profile.role === 'LOJISTA' && storeMatch) {
-                profile.storeId = storeMatch.id;
-            } else if (profile.role === 'PRESTADOR' && serviceMatch) {
-                profile.serviceId = serviceMatch.id;
+            // DEV Logic
+            if (isAuthorizedDev && (!profile || profile.role !== 'DEV')) {
+                const url = import.meta.env.VITE_SUPABASE_URL;
+                const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                if (!profile) {
+                    const newDev = { id: data.user.id, name: 'Desenvolvedor Master', email, role: 'DEV', phone: '', document: '', address: '' };
+                    await fetch(`${url}/rest/v1/profiles`, {
+                        method: 'POST',
+                        headers: { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newDev)
+                    });
+                    profile = newDev;
+                } else {
+                    await fetch(`${url}/rest/v1/profiles?id=eq.${data.user.id}`, {
+                        method: 'PATCH',
+                        headers: { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ role: 'DEV' })
+                    });
+                    profile.role = 'DEV';
+                }
             }
 
-            setCurrentUser(profile);
-            setShowAuthModal(false);
-            showSuccess('Login realizado!');
-        } else {
-            // Create Default Client
-            const newUser: User = {
-                id: data.user.id,
-                name: (formData.get('name') as string) || 'Usuário',
-                email,
-                role: 'CLIENTE',
-                phone: '', document: '', address: ''
-            };
-            const { error: insErr } = await supabase.from('profiles').insert([newUser]);
-            if (!insErr) {
-                setCurrentUser(newUser);
+            if (profile) {
+                setCurrentUser(profile);
                 setShowAuthModal(false);
-                showSuccess('Login realizado (novo perfil)');
+                showSuccess('Login realizado!');
             } else {
-                showError('Erro ao criar perfil.' + insErr.message);
+                showError('Perfil não encontrado. Tente novamente.');
             }
+        } catch (err: any) {
+            console.error('[AUTH] Erro fatal no login:', err);
+            showError('Erro de conexão no login.');
         }
     };
 
@@ -155,44 +132,42 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         const email = (formData.get('email') as string).trim().toLowerCase();
         const password = (formData.get('password') as string).trim();
         const name = formData.get('name') as string;
-        const isAuthorizedDev = email === 'devvitrinefrutal@gmail.com';
 
-        // Validation logic...
-        // Simplification: Direct Supabase call
+        try {
+            const { data, error } = await supabase.auth.signUp({
+                email, password,
+                options: { data: { full_name: name, role: selectedRole } }
+            });
 
-        const { data, error } = await supabase.auth.signUp({
-            email, password,
-            options: { data: { full_name: name, role: selectedRole } }
-        });
+            if (error) { showError(error.message); return; }
 
-        if (error) { showError(error.message); return; }
+            if (data.user) {
+                const url = import.meta.env.VITE_SUPABASE_URL;
+                const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                const newUser = {
+                    id: data.user.id,
+                    name, email,
+                    role: email === 'devvitrinefrutal@gmail.com' ? 'DEV' : selectedRole,
+                    phone: '', document: '', address: ''
+                };
 
-        if (data.user) {
-            // Insert profile logic
-            const newUser = {
-                id: data.user.id,
-                name, email,
-                role: isAuthorizedDev ? 'DEV' : selectedRole,
-                phone: '', document: '', address: ''
-            };
+                await fetch(`${url}/rest/v1/profiles`, {
+                    method: 'POST',
+                    headers: { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newUser)
+                });
 
-            await supabase.from('profiles').insert([newUser]);
-            setCurrentUser(newUser as User);
-            setShowAuthModal(false);
-            showSuccess('Conta criada!');
+                setCurrentUser(newUser as User);
+                setShowAuthModal(false);
+                showSuccess('Conta criada!');
+            }
+        } catch (err: any) {
+            showError('Erro ao registrar.');
         }
     };
 
     return {
-        currentUser,
-        rememberMe,
-        setRememberMe,
-        authMode,
-        setAuthMode,
-        showAuthModal,
-        setShowAuthModal,
-        login,
-        logout,
-        register
+        currentUser, rememberMe, setRememberMe, authMode, setAuthMode,
+        showAuthModal, setShowAuthModal, login, logout, register
     };
 }
