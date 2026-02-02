@@ -119,15 +119,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                             <NavBtn active={section === 'PRODUCTS'} icon={<Package size={20} />} label="Produtos" onClick={() => setSection('PRODUCTS')} />
                             <NavBtn active={section === 'STOCK'} icon={<ShoppingBag size={20} />} label="Estoque" onClick={() => setSection('STOCK')} />
                             <NavBtn active={section === 'SETTINGS'} icon={<Settings size={20} />} label="Configurar Loja" onClick={() => { setModalImages(currentStore?.image ? [currentStore.image] : []); setShowStoreModal(true); }} />
+                            <NavBtn active={section === 'PROFILE'} icon={<UserIcon size={20} />} label="Meus Dados" onClick={() => setSection('PROFILE')} />
                         </>
                     )}
                     {user.role === 'CLIENTE' && (
-                        <NavBtn active={section === 'MY_ORDERS'} icon={<ShoppingBag size={20} />} label="Meus Pedidos" onClick={() => setSection('MY_ORDERS')} />
+                        <>
+                            <NavBtn active={section === 'MY_ORDERS'} icon={<ShoppingBag size={20} />} label="Meus Pedidos" onClick={() => setSection('MY_ORDERS')} />
+                            <NavBtn active={section === 'PROFILE'} icon={<UserIcon size={20} />} label="Meus Dados" onClick={() => setSection('PROFILE')} />
+                        </>
                     )}
                     {user.role === 'PRESTADOR' && (
                         <>
                             <NavBtn active={section === 'SERVICES'} icon={<Package size={20} />} label="Meus Serviços" onClick={() => setSection('SERVICES')} />
-                            <NavBtn active={section === 'PROFILE'} icon={<Settings size={20} />} label="Perfil Profissional" onClick={() => setSection('PROFILE')} />
+                            <NavBtn active={section === 'PROFILE'} icon={<Settings size={20} />} label="Meus Dados" onClick={() => setSection('PROFILE')} />
                         </>
                     )}
                     {user.role === 'DEV' && (
@@ -136,6 +140,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                             <NavBtn active={section === 'STORES'} icon={<StoreIcon size={20} />} label="Lojas" onClick={() => setSection('STORES')} />
                             <NavBtn active={section === 'SERVICES'} icon={<Package size={20} />} label="Serviços" onClick={() => setSection('SERVICES')} />
                             <NavBtn active={section === 'CULTURAL'} icon={<Calendar size={20} />} label="Giro Cultural" onClick={() => setSection('CULTURAL')} />
+                            <NavBtn active={section === 'PROFILE'} icon={<UserIcon size={20} />} label="Meus Dados" onClick={() => setSection('PROFILE')} />
                         </>
                     )}
 
@@ -370,6 +375,61 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     </div>
                 )}
 
+                {/* PROFILE SECTION (Common for all) */}
+                {section === 'PROFILE' && (
+                    <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm space-y-8 animate-in slide-in-from-bottom-4">
+                        <div className="flex items-center gap-4">
+                            <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl">
+                                <UserIcon size={32} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-black tracking-tight uppercase">Meus Dados</h3>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Mantenha suas informações de contato atualizadas</p>
+                            </div>
+                        </div>
+
+                        <form
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                setIsSaving(true);
+                                const fd = new FormData(e.currentTarget);
+                                await actions.updateProfile(fd, currentStore, null);
+                                setIsSaving(false);
+                            }}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                        >
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Nome Completo</label>
+                                <input name="name" required defaultValue={user.name} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold focus:ring-2 ring-orange-100 transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">E-mail</label>
+                                <input name="email" required readOnly defaultValue={user.email} className="w-full p-4 bg-gray-200 rounded-2xl outline-none font-bold text-gray-500 cursor-not-allowed" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Telefone / WhatsApp</label>
+                                <input name="phone" required defaultValue={user.phone} placeholder="(34) 9 9999-9999" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold focus:ring-2 ring-orange-100 transition-all" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Documento (CPF/CNPJ)</label>
+                                <input name="document" defaultValue={user.document} placeholder="000.000.000-00" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold focus:ring-2 ring-orange-100 transition-all" />
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Endereço de Entrega</label>
+                                <textarea name="address" required defaultValue={user.address} placeholder="Rua, Número, Bairro, Frutal-MG" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold focus:ring-2 ring-orange-100 transition-all h-32 resize-none" />
+                            </div>
+
+                            <div className="md:col-span-2 pt-4">
+                                <button
+                                    disabled={isSaving}
+                                    className="w-full md:w-auto px-12 py-4 bg-green-600 text-white font-black rounded-2xl shadow-lg hover:bg-green-700 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
+                                >
+                                    {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
             </div>
 
             {/* MODALS */}

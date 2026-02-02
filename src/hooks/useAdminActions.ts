@@ -76,7 +76,7 @@ export function useAdminActions(
                 // The original code mixed store update with profile update.
                 // We should update the profile table too basically
                 const { error } = await supabase.from('profiles').update({
-                    full_name: updatedUser.name,
+                    name: updatedUser.name,
                     phone: updatedUser.phone,
                     document: updatedUser.document,
                     address: updatedUser.address
