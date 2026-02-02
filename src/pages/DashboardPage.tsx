@@ -147,7 +147,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                             <NavBtn active={section === 'PRODUCTS'} icon={<Package size={20} />} label="Produtos" onClick={() => setSection('PRODUCTS')} />
                             <NavBtn active={section === 'STOCK'} icon={<ShoppingBag size={20} />} label="Estoque" onClick={() => setSection('STOCK')} />
                             <NavBtn active={section === 'SETTINGS'} icon={<Settings size={20} />} label="Configurar Loja" onClick={() => { setModalImages(currentStore?.image ? [currentStore.image] : []); setShowStoreModal(true); }} />
-                            <NavBtn active={section === 'PROFILE'} icon={<UserIcon size={20} />} label="Meus Dados" onClick={() => setSection('PROFILE')} />
                         </>
                     )}
                     {user.role === 'CLIENTE' && (
