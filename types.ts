@@ -28,6 +28,8 @@ export interface Store {
   deliveryFee?: number;
   bairro?: string;
   hasDelivery?: boolean;
+  latitude?: number;
+  longitude?: number;
   dailyRevenueAdj?: number;
   monthlyRevenueAdj?: number;
   lastFinanceUpdate?: string; // ISO Date para controle de resets

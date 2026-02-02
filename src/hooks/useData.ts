@@ -46,9 +46,10 @@ export function useData(showError: (msg: string) => void) {
             setStores(storesData.map((s: any) => ({
                 ...s,
                 ownerId: s.owner_id || s.id_do_proprietario || s.id_do_proprietário,
-                deliveryFee: s.delivery_fee || s.taxa_entrega,
                 bairro: s.bairro,
-                hasDelivery: s.has_delivery
+                hasDelivery: s.has_delivery,
+                latitude: s.latitude,
+                longitude: s.longitude
             })));
         }
 

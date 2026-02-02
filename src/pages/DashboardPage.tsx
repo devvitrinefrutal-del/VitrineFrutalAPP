@@ -566,14 +566,47 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Bairro</label>
                             <select name="bairro" required defaultValue={currentStore?.bairro} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
                                 <option value="">Escolha...</option>
-                                <option value="Centro">Centro</option>
-                                <option value="Ipê">Ipê</option>
-                                <option value="Nossa Senhora do Carmo">Nossa Senhora do Carmo</option>
-                                <option value="Princesa Isabel">Princesa Isabel</option>
-                                <option value="Vila Esperança">Vila Esperança</option>
-                                <option value="Novo Horizonte">Novo Horizonte</option>
-                                <option value="Progresso">Progresso</option>
-                                <option value="Outros">Outros</option>
+                                <optgroup label="Centro e Arredores">
+                                    <option value="Centro">Centro</option>
+                                    <option value="Caju">Caju</option>
+                                    <option value="XV de Novembro">XV de Novembro</option>
+                                    <option value="Estudantil">Estudantil</option>
+                                </optgroup>
+                                <optgroup label="Tradicionais">
+                                    <option value="Nossa Senhora do Carmo">Nossa Senhora do Carmo</option>
+                                    <option value="Nossa Senhora Aparecida">Nossa Senhora Aparecida</option>
+                                    <option value="Princesa Isabel I e II">Princesa Isabel I e II</option>
+                                    <option value="Santos Dumont">Santos Dumont</option>
+                                    <option value="Progresso">Progresso</option>
+                                    <option value="Alto Boa Vista">Alto Boa Vista</option>
+                                    <option value="Eldorado">Eldorado</option>
+                                    <option value="Vila Esperança">Vila Esperança</option>
+                                </optgroup>
+                                <optgroup label="Novos Loteamentos">
+                                    <option value="Cidade Jardim">Cidade Jardim</option>
+                                    <option value="Jardim do Bosque I e II">Jardim do Bosque I e II</option>
+                                    <option value="Jardim das Laranjeiras">Jardim das Laranjeiras</option>
+                                    <option value="Jardim das Palmeiras">Jardim das Palmeiras</option>
+                                    <option value="Jardim Brasil">Jardim Brasil</option>
+                                    <option value="Jardim das Esmeraldas">Jardim das Esmeraldas</option>
+                                    <option value="Jardins dos Ipês">Jardins dos Ipês</option>
+                                    <option value="Morada dos Ipês">Morada dos Ipês</option>
+                                    <option value="Ipê Amarelo">Ipê Amarelo</option>
+                                </optgroup>
+                                <optgroup label="Expansões e Conjuntos">
+                                    <option value="Frutal II e III">Frutal II e III</option>
+                                    <option value="Novo Horizonte">Novo Horizonte</option>
+                                    <option value="Nova Frutal">Nova Frutal</option>
+                                    <option value="Waldemar Marchi I e II">Waldemar Marchi I e II</option>
+                                    <option value="Paralelo XX">Paralelo XX</option>
+                                    <option value="Alceu Queiroz">Alceu Queiroz</option>
+                                    <option value="Residencial das Américas">Residencial das Américas</option>
+                                    <option value="Residencial Parque das Acácias">Residencial Parque das Acácias</option>
+                                </optgroup>
+                                <optgroup label="Áreas Nobres">
+                                    <option value="Granville Casa Blanca">Granville Casa Blanca</option>
+                                    <option value="Villa Florence">Villa Florence</option>
+                                </optgroup>
                             </select>
                         </div>
                     </div>
@@ -589,6 +622,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                 <option value="true">Sim, entregamos</option>
                                 <option value="false">Não fazemos entrega</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Latitude (GPS)</label>
+                            <input name="latitude" type="number" step="0.000001" defaultValue={currentStore?.latitude} placeholder="Ex: -20.228" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Longitude (GPS)</label>
+                            <input name="longitude" type="number" step="0.000001" defaultValue={currentStore?.longitude} placeholder="Ex: -48.941" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
                         </div>
                     </div>
 

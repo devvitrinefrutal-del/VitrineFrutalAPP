@@ -151,6 +151,8 @@ export function useAdminActions(
                 monthly_revenue_adj: parseFloat(formData.get('monthlyRevenueAdj') as string) || editingStore?.monthlyRevenueAdj || 0,
                 bairro: formData.get('bairro') as string || editingStore?.bairro || '',
                 has_delivery: formData.get('hasDelivery') === 'true',
+                latitude: parseFloat(formData.get('latitude') as string) || null,
+                longitude: parseFloat(formData.get('longitude') as string) || null,
                 image: image || editingStore?.image || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
             };
 
