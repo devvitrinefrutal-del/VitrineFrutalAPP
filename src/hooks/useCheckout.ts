@@ -97,62 +97,8 @@ export function useCheckout(
             const orderData = await orderResponse.json();
             console.log('Pedido criado:', orderData);
 
-            // 2. Atualizar Estoque (Fetch Nativo - Mais resiliente)
-            console.log('--- [SISTEMA] Iniciando baixa de estoque detalhada... ---');
-            for (const item of cart) {
-                try {
-                    console.log(`[ESTOQUE] Processando item: ${item.name} (${item.productId})`);
-
-                    // Buscar estoque real no banco para evitar race conditions e erros de estado local
-                    const prodResponse = await fetch(`${url}/rest/v1/products?id=eq.${item.productId}&select=stock`, {
-                        headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
-                    });
-
-                    if (!prodResponse.ok) {
-                        console.error(`[ERRO FETCH ESTOQUE] Falha ao ler estoque de ${item.name}:`, await prodResponse.text());
-                        continue;
-                    }
-
-                    const prodData = await prodResponse.json();
-
-                    if (prodData && prodData[0]) {
-                        const currentStock = prodData[0].stock || 0;
-                        if (currentStock < item.quantity) {
-                            console.warn(`[ESTOQUE] Estoque insuficiente para ${item.name}: Banco=${currentStock}, Necessário=${item.quantity}`);
-                        }
-                        const newStock = Math.max(0, currentStock - item.quantity);
-
-                        console.log(`[ESTOQUE] Cálculo para ${item.name}: Banco=${currentStock}, Comprado=${item.quantity} -> Novo=${newStock}`);
-
-                        const patchResponse = await fetch(`${url}/rest/v1/products?id=eq.${item.productId}`, {
-                            method: 'PATCH',
-                            headers: {
-                                'apikey': key,
-                                'Authorization': `Bearer ${sessionToken}`,
-                                'Content-Type': 'application/json',
-                                'Prefer': 'return=representation'
-                            },
-                            body: JSON.stringify({ stock: newStock })
-                        });
-
-                        if (!patchResponse.ok) {
-                            const patchErrText = await patchResponse.text();
-                            console.error(`[ERRO PATCH ESTOQUE] Falha ao atualizar ${item.name}:`, patchErrText);
-                        } else {
-                            const patchedDataList = await patchResponse.json();
-                            console.log(`[ESTOQUE] Sucesso para ${item.name}:`, patchedDataList);
-
-                            // Atualiza o estado local para refletir a mudança imediatamente
-                            setProducts(prev => prev.map(p => p.id === item.productId ? { ...p, stock: newStock } : p));
-                        }
-                    } else {
-                        console.warn(`[AVISO] Produto ${item.productId} não encontrado no banco.`);
-                    }
-                } catch (stockErr) {
-                    console.error(`[ERRO CRÍTICO ESTOQUE] Item ${item.productId}:`, stockErr);
-                }
-            }
-            console.log('--- [SISTEMA] Finalizada baixa de estoque ---');
+            // 2. Processamento de Estoque via Trigger (Servidor)
+            console.log('--- [SISTEMA] Pedido salvo e estoque será processado via Trigger no Banco ---');
 
             // 3. Buscar Info da Loja (Fetch Nativo) para WhatsApp
             const storeResponse = await fetch(`${url}/rest/v1/stores?id=eq.${storeId}&select=whatsapp,name`, {
