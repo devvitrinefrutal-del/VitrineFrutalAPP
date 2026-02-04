@@ -23,7 +23,6 @@ interface DashboardPageProps {
     showError: (msg: string) => void;
     stores: Store[]; // Need full list for some checks?
     fetchStoreProducts: (storeId: string) => void;
-    fetchStoreProducts: (storeId: string) => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
