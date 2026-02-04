@@ -125,6 +125,19 @@ export function useAdminActions(
         }
     };
 
+    const deleteProduct = async (id: string, storeId: string) => {
+        try {
+            const { error } = await supabase.from('products').delete().eq('id', id);
+            if (error) throw error;
+            setters.setProducts(prev => prev.filter(p => p.id !== id));
+            showSuccess('Produto excluído com sucesso!');
+            return true;
+        } catch (error: any) {
+            showError('Erro ao excluir produto: ' + error.message);
+            return false;
+        }
+    };
+
     const saveStore = async (formData: FormData, image: string | null, editingStore: Store | null) => {
         console.log('--- [SISTEMA] Iniciando saveStore Inteligente... ---');
         try {
@@ -424,6 +437,7 @@ export function useAdminActions(
         saveCulturalItem,
         updateOrderStatus,
         updateOrderDeliveryFee,
-        syncFinancials
+        syncFinancials,
+        deleteProduct
     };
 }

@@ -59,14 +59,14 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, currentStore
 
                     <div className="bg-gray-50 p-6 rounded-2xl mb-8 flex flex-col md:flex-row gap-6">
                         <div className="flex-1 space-y-2">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cliente</p>
-                            <p className="font-black text-lg text-black uppercase tracking-tighter">{selectedOrder.customerName}</p>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cliente</label>
+                            <label className="font-black text-lg text-black uppercase tracking-tighter">{selectedOrder.customerName}</label>
                             <div className="flex items-center gap-2 text-xs font-bold text-gray-500">
                                 <MessageCircle size={14} className="text-green-500" /> {selectedOrder.customerPhone || 'Não informado'}
                             </div>
                         </div>
                         <div className="flex-1 space-y-2">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Entrega ({selectedOrder.deliveryMethod})</p>
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Entrega ({selectedOrder.deliveryMethod})</label>
                             <div className="flex items-start gap-2 text-xs font-medium text-gray-600 leading-relaxed bg-white p-3 rounded-xl shadow-sm">
                                 <MapPin size={14} className="mt-0.5 text-orange-500 shrink-0" />
                                 {selectedOrder.customerAddress}
@@ -75,7 +75,7 @@ export const OrderManager: React.FC<OrderManagerProps> = ({ orders, currentStore
                     </div>
 
                     <div className="space-y-4 mb-8">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Itens do Pedido</p>
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Itens do Pedido</label>
                         {selectedOrder.items.map((item, i) => (
                             <div key={i} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
                                 <div className="flex items-center gap-4">

@@ -12,7 +12,7 @@ export const CulturalDetailPage: React.FC<CulturalDetailPageProps> = ({ item, on
         <div className="space-y-8 animate-in fade-in max-w-4xl mx-auto pb-20">
             <button
                 onClick={onBack}
-                className="text-purple-600 font-black flex items-center gap-2 group uppercase tracking-widest text-[10px]"
+                className="text-emerald-600 font-black flex items-center gap-2 group uppercase tracking-widest text-[10px]"
             >
                 <ArrowLeft className="group-hover:-translate-x-1 transition-transform" size={20} />
                 Voltar ao Giro
@@ -21,11 +21,11 @@ export const CulturalDetailPage: React.FC<CulturalDetailPageProps> = ({ item, on
                 <img src={item.image} alt={item.title} className="w-full aspect-video object-cover" />
                 <div className="p-10 md:p-20 space-y-10">
                     <div className="flex items-center gap-6">
-                        <span className="px-6 py-2 bg-purple-100 text-purple-600 rounded-full text-[10px] font-black uppercase tracking-widest">
+                        <span className="px-6 py-2 bg-emerald-100 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest">
                             {item.type}
                         </span>
                         <span className="flex items-center gap-2 text-gray-400 text-[10px] font-black uppercase tracking-widest">
-                            <Calendar size={14} className="text-purple-500" /> {item.date}
+                            <Calendar size={14} className="text-emerald-500" /> {item.date}
                         </span>
                     </div>
                     <h2 className="text-5xl md:text-7xl font-black text-black leading-[0.9] tracking-tighter uppercase">

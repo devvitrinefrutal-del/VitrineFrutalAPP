@@ -28,7 +28,7 @@ export const CulturalPage: React.FC<CulturalPageProps> = ({ items, onSelectItem 
                             />
                         </div>
                         <div className="p-10 md:w-1/2 flex flex-col justify-center">
-                            <span className="text-purple-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
+                            <span className="text-emerald-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
                                 {item.type}
                             </span>
                             <h3 className="text-4xl font-black text-black mb-6 leading-none tracking-tighter uppercase">
@@ -37,7 +37,7 @@ export const CulturalPage: React.FC<CulturalPageProps> = ({ items, onSelectItem 
                             <p className="text-gray-500 mb-8 line-clamp-2 font-medium leading-relaxed">
                                 {item.description}
                             </p>
-                            <div className="flex items-center gap-2 font-black text-purple-600 text-[10px] uppercase tracking-widest group-hover:gap-4 transition-all">
+                            <div className="flex items-center gap-2 font-black text-emerald-600 text-[10px] uppercase tracking-widest group-hover:gap-4 transition-all">
                                 Ver Detalhes do Evento <ArrowRight size={16} />
                             </div>
                         </div>

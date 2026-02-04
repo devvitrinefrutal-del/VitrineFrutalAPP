@@ -59,7 +59,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
             {store && (
                 <div className="flex items-center gap-4 bg-orange-500 p-6 rounded-[2rem] text-white shadow-lg shadow-orange-100 border-2 border-orange-400 animate-in slide-in-from-left-4">
-                    <img src={store.image} className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20" />
+                    <img src={store.image} alt={store.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-white/20" />
                     <div>
                         <h3 className="font-black text-lg leading-none uppercase tracking-tighter">{store.name}</h3>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mt-1 flex items-center gap-2">
@@ -87,7 +87,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
                         {cart.map((item) => (
                             <div key={item.productId} className="flex gap-6 border-b border-gray-100 pb-6 mb-6 last:mb-0 last:pb-0 last:border-0 relative">
-                                <img src={item.image} className="w-24 h-24 rounded-2xl object-cover" />
+                                <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-xl shadow-sm" />
                                 <div className="flex-1 flex flex-col justify-between">
                                     <div className="pr-8">
                                         <h4 className="font-black text-black leading-tight uppercase tracking-tighter mb-1">{item.name}</h4>

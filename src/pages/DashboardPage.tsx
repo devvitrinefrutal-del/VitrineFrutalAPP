@@ -118,11 +118,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
     // Handlers needed for list actions
     const handleDeleteProduct = async (id: string) => {
-        // We'd need delete action in useAdminActions, skipping for space unless critical
         if (confirm('Tem certeza? Ação irreversível.')) {
-            // Implementation omitted in useAdminActions for brevity, assuming minimal requirement.
-            // If strictly needed, I'd add to hook. I'll add a placeholder alert.
-            alert('Funcionalidade de exclusão pendente no hook.');
+            await actions.deleteProduct(id, currentStore?.id);
         }
     };
 
@@ -235,7 +232,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                             {products.filter(p => p.storeId === currentStore?.id).map(p => (
                                 <div key={p.id} className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col group">
                                     <div className="overflow-hidden rounded-2xl mb-4 aspect-square relative">
-                                        <img src={p.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                        <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                         <button onClick={() => { setEditingProduct(p); setShowProductModal(true); }} className="absolute top-2 right-2 p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-orange-500 hover:text-orange-600"><Edit2 size={12} /></button>
                                     </div>
                                     <h4 className="font-black text-black truncate mb-1 text-[10px] uppercase tracking-tighter">{p.name}</h4>
@@ -449,7 +446,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     <div className="space-y-6">
                         <div className="flex justify-between items-center bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm">
                             <h3 className="text-xl font-black text-black tracking-tight uppercase tracking-widest text-xs">Giro Cultural</h3>
-                            <button onClick={() => { setEditingCulturalItem(null); setModalImages([]); setShowCulturalModal(true); }} className="bg-purple-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 shadow-lg hover:bg-purple-700 transition-all uppercase tracking-[0.2em]">
+                            <button onClick={() => { setEditingCulturalItem(null); setModalImages([]); setShowCulturalModal(true); }} className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 shadow-lg hover:bg-emerald-700 transition-all uppercase tracking-[0.2em]">
                                 <Plus size={16} /> Novo Evento
                             </button>
                         </div>
@@ -462,7 +459,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                         <h4 className="font-black text-black uppercase tracking-tight text-lg">{item.title}</h4>
                                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{item.date}</p>
                                     </div>
-                                    <button onClick={() => { setEditingCulturalItem(item); setModalImages(item.images || [item.image]); setShowCulturalModal(true); }} className="p-3 bg-gray-50 text-purple-600 rounded-xl hover:bg-purple-50 transition-all">
+                                    <button onClick={() => { setEditingCulturalItem(item); setModalImages(item.images || [item.image]); setShowCulturalModal(true); }} className="p-3 bg-gray-50 text-emerald-600 rounded-xl hover:bg-emerald-50 transition-all">
                                         <Edit2 size={16} />
                                     </button>
                                 </div>
@@ -685,7 +682,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     </div>
                     <textarea name="description" required defaultValue={editingCulturalItem?.description} placeholder="Descrição Detalhada" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold h-24 resize-none" />
                     <MultiImageInput max={5} initialImages={modalImages} onImagesChange={setModalImages} showError={showError} />
-                    <button className="w-full py-4 bg-purple-600 text-white font-black rounded-2xl uppercase tracking-widest text-xs">Salvar Evento</button>
+                    <button className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-widest text-xs">Salvar Evento</button>
                 </form>
             </Modal>
 

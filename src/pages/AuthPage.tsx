@@ -46,7 +46,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                             <RoleCard icon={<UserCircle className="text-green-500" size={24} />} title="Cliente" onClick={() => { setSelectedRole('CLIENTE'); setAuthMode('LOGIN'); }} />
                             <RoleCard icon={<StoreIcon className="text-orange-500" size={24} />} title="Lojista" onClick={() => { setSelectedRole('LOJISTA'); setAuthMode('LOGIN'); }} />
-                            <RoleCard icon={<ShieldCheck className="text-purple-500" size={24} />} title="DEV" onClick={() => { setSelectedRole('DEV'); setAuthMode('LOGIN'); }} />
+                            <RoleCard icon={<ShieldCheck className="text-teal-500" size={24} />} title="DEV" onClick={() => { setSelectedRole('DEV'); setAuthMode('LOGIN'); }} />
                         </div>
                         <div className="pt-4 text-center border-t border-gray-100">
                             <button
