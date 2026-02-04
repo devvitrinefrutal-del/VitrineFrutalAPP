@@ -99,11 +99,35 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-4 mt-2">
-                                        <div className="flex items-center bg-gray-50 rounded-xl p-1">
-                                            <button onClick={() => onUpdateQuantity(item.productId, -1)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-white hover:text-black hover:shadow-sm rounded-lg transition-all font-bold">-</button>
-                                            <span className="w-8 text-center font-black text-sm">{item.quantity}</span>
-                                            <button onClick={() => onUpdateQuantity(item.productId, 1)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-white hover:text-black hover:shadow-sm rounded-lg transition-all font-bold">+</button>
-                                        </div>
+                                        {(() => {
+                                            const liveStock = products.find(p => p.id === item.productId)?.stock ?? item.stock ?? 0;
+                                            const isOverStock = item.quantity > liveStock;
+
+                                            return (
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`flex items-center rounded-xl p-1 ${isOverStock ? 'bg-red-50 ring-2 ring-red-200' : 'bg-gray-50'}`}>
+                                                        <button
+                                                            onClick={() => onUpdateQuantity(item.productId, -1)}
+                                                            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-white hover:text-black hover:shadow-sm rounded-lg transition-all font-bold"
+                                                        >-</button>
+                                                        <span className={`w-8 text-center font-black text-sm ${isOverStock ? 'text-red-600' : 'text-black'}`}>{item.quantity}</span>
+                                                        <button
+                                                            disabled={item.quantity >= liveStock}
+                                                            onClick={() => onUpdateQuantity(item.productId, 1)}
+                                                            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all font-bold ${item.quantity >= liveStock
+                                                                ? 'text-gray-200 cursor-not-allowed'
+                                                                : 'text-gray-400 hover:bg-white hover:text-black hover:shadow-sm'
+                                                                }`}
+                                                        >+</button>
+                                                    </div>
+                                                    {isOverStock && (
+                                                        <span className="text-[8px] font-black text-red-500 uppercase tracking-widest animate-pulse">
+                                                            Excede o estoque!
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                         <span className="font-black text-green-600">R$ {(item.price * item.quantity).toFixed(2)}</span>
                                     </div>
                                 </div>
@@ -229,7 +253,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
                         <button
                             onClick={handleFinish}
-                            disabled={isFinishing}
+                            disabled={isFinishing || cart.some(item => {
+                                const liveStock = products.find(p => p.id === item.productId)?.stock ?? item.stock ?? 0;
+                                return item.quantity > liveStock;
+                            })}
                             className="w-full mt-8 py-5 bg-green-600 text-white font-black rounded-2xl shadow-xl hover:bg-green-700 transition-all active:scale-95 uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isFinishing ? 'Processando...' : <><Send size={18} /> Enviar Pedido via WhatsApp</>}

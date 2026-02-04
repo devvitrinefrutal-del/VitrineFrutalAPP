@@ -37,14 +37,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     R$ {product.price.toFixed(2)}
                 </span>
                 <button
+                    disabled={product.stock <= 0}
                     onClick={(e) => {
                         e.stopPropagation();
                         onAddToCart(product);
                     }}
-                    className="p-2 bg-gray-900 text-white rounded-xl hover:bg-orange-500 transition-colors shadow-lg shadow-gray-200 active:scale-95"
-                    title="Adicionar ao carrinho"
+                    className={`p-2 rounded-xl transition-all shadow-lg active:scale-95 flex items-center gap-1 ${product.stock <= 0
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-900 text-white hover:bg-orange-500 shadow-gray-200'
+                        }`}
+                    title={product.stock <= 0 ? "Produto sem estoque" : "Adicionar ao carrinho"}
                 >
-                    <Plus size={16} />
+                    {product.stock <= 0 ? (
+                        <span className="text-[8px] font-black uppercase px-2">Sem estoque</span>
+                    ) : (
+                        <Plus size={16} />
+                    )}
                 </button>
             </div>
         </div>
