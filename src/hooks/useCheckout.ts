@@ -46,6 +46,10 @@ export function useCheckout(
             const url = import.meta.env.VITE_SUPABASE_URL;
             const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+            // 0. Obter Sessão para RLS
+            const { data: sessionData } = await supabase.auth.getSession();
+            const sessionToken = sessionData.session?.access_token || key;
+
             const itemsPayload = cart.map(item => ({
                 productId: item.productId,
                 name: item.name,
@@ -73,12 +77,12 @@ export function useCheckout(
 
             console.log('Payload para DB:', newOrderDB);
 
-            // 1. Inserir Pedido via Fetch Nativo (Resiliente)
+            // 1. Inserir Pedido via Fetch Nativo (Resiliente com Token de Sessão)
             const orderResponse = await fetch(`${url}/rest/v1/orders`, {
                 method: 'POST',
                 headers: {
                     'apikey': key,
-                    'Authorization': `Bearer ${key}`,
+                    'Authorization': `Bearer ${sessionToken}`,
                     'Content-Type': 'application/json',
                     'Prefer': 'return=representation'
                 },
@@ -124,7 +128,7 @@ export function useCheckout(
                             method: 'PATCH',
                             headers: {
                                 'apikey': key,
-                                'Authorization': `Bearer ${key}`,
+                                'Authorization': `Bearer ${sessionToken}`,
                                 'Content-Type': 'application/json',
                                 'Prefer': 'return=representation'
                             },
