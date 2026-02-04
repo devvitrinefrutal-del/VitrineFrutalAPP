@@ -272,6 +272,7 @@ function App() {
                 onBack={() => navigate('/')}
                 onFinalize={handleFinalizePurchase as any}
                 isFinishing={isFinishing}
+                products={data.products}
               />
             } />
 

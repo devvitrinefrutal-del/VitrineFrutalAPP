@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Trash2, MapPin, Truck, Building2, DollarSign, CreditCard, ShoppingBag, Send } from 'lucide-react';
-import { User, Store } from '../../types';
+import { User, Store, Product } from '../../types';
 import { CartItem } from '../hooks/useCart';
 
 interface CheckoutPageProps {
@@ -13,6 +13,7 @@ interface CheckoutPageProps {
     onBack: () => void;
     onFinalize: (data: any) => Promise<boolean>;
     isFinishing: boolean;
+    products: Product[];
 }
 
 export const CheckoutPage: React.FC<CheckoutPageProps> = ({
@@ -24,7 +25,8 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     onClearCart,
     onBack,
     onFinalize,
-    isFinishing
+    isFinishing,
+    products
 }) => {
     const [deliveryMethod, setDeliveryMethod] = useState<'ENTREGA' | 'RETIRADA'>('ENTREGA');
     const [address, setAddress] = useState(user?.address || '');
@@ -92,7 +94,9 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                                     <div className="pr-8">
                                         <h4 className="font-black text-black leading-tight uppercase tracking-tighter mb-1">{item.name}</h4>
                                         <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Unitário: R$ {item.price.toFixed(2)}</p>
-                                        <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest mt-0.5">Disponível em Estoque: {item.stock}</p>
+                                        <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest mt-0.5">
+                                            Disponível em Estoque: {products.find(p => p.id === item.productId)?.stock ?? item.stock ?? 0}
+                                        </p>
                                     </div>
                                     <div className="flex items-center gap-4 mt-2">
                                         <div className="flex items-center bg-gray-50 rounded-xl p-1">
