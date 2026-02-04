@@ -71,15 +71,6 @@ export interface CulturalItem {
   images?: string[];
 }
 
-export interface NewsItem {
-  id: string;
-  title: string;
-  category: 'Cidade' | 'Comércio' | 'Utilidade Pública';
-  content: string;
-  image: string;
-  images?: string[];
-  createdAt: string;
-}
 
 export interface Order {
   id: string;

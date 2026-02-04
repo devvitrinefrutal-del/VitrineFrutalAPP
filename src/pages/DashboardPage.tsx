@@ -23,6 +23,7 @@ interface DashboardPageProps {
     showError: (msg: string) => void;
     stores: Store[]; // Need full list for some checks?
     fetchStoreProducts: (storeId: string) => void;
+    fetchStoreProducts: (storeId: string) => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -479,25 +480,30 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 {/* DEV: CULTURAL */}
                 {user.role === 'DEV' && section === 'CULTURAL' && (
                     <div className="space-y-6">
-                        <div className="flex justify-between items-center bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm">
-                            <div className="flex flex-col gap-1">
-                                <h3 className="text-xl font-black text-black tracking-tight uppercase tracking-widest text-xs">Giro Cultural</h3>
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Controle de eventos da cidade</p>
+                        {/* Header */}
+                        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm flex flex-col gap-6">
+                            <div className="flex justify-between items-center">
+                                <div className="flex flex-col gap-1">
+                                    <h3 className="text-xl font-black text-black tracking-tight uppercase tracking-widest text-xs">Giro Cultural</h3>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Controle de eventos da cidade</p>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-4">
+
+                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
                                 <button
                                     onClick={handleSendDigestNow}
                                     disabled={isSendingDigest}
                                     className="bg-white border-2 border-emerald-600 text-emerald-600 px-6 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 shadow-sm hover:bg-emerald-50 transition-all uppercase tracking-[0.2em] disabled:opacity-50"
                                 >
-                                    {isSendingDigest ? 'Enviando...' : 'Disparar Newsletter Agora'}
+                                    {isSendingDigest ? 'Enviando...' : 'Disparar Newsletter'}
                                 </button>
                                 <button onClick={() => { setEditingCulturalItem(null); setModalImages([]); setShowCulturalModal(true); }} className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 shadow-lg hover:bg-emerald-700 transition-all uppercase tracking-[0.2em]">
                                     <Plus size={16} /> Novo Evento
                                 </button>
                             </div>
                         </div>
-                        {/* List cultural items */}
+
+                        {/* List Content */}
                         <div className="grid grid-cols-1 gap-6">
                             {culturalItems.map(item => (
                                 <div key={item.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex items-center gap-6">
@@ -763,7 +769,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </form>
             </Modal>
 
-        </div>
+            {/* MODALS END */}
+        </div >
     );
 };
 
