@@ -260,7 +260,20 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                 <div key={p.id} className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col group">
                                     <div className="overflow-hidden rounded-2xl mb-4 aspect-square relative">
                                         <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                        <button onClick={() => { setEditingProduct(p); setShowProductModal(true); }} className="absolute top-2 right-2 p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-orange-500 hover:text-orange-600"><Edit2 size={12} /></button>
+                                        <div className="absolute top-2 right-2 flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm('Tem certeza que deseja excluir este produto?')) {
+                                                        actions.deleteProduct(p.id, p.storeId);
+                                                    }
+                                                }}
+                                                className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-red-500 hover:text-red-700 hover:bg-red-50 transition-all"
+                                                title="Excluir produto"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                            <button onClick={() => { setEditingProduct(p); setShowProductModal(true); }} className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-orange-500 hover:text-orange-600"><Edit2 size={12} /></button>
+                                        </div>
                                     </div>
                                     <h4 className="font-black text-black truncate mb-1 text-[10px] uppercase tracking-tighter">{p.name}</h4>
                                     <div className="mt-auto flex justify-between items-center">
