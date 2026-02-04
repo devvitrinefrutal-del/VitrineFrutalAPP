@@ -390,10 +390,10 @@ export function useAdminActions(
             // quando o status for alterado para 'CANCELADO'.
             // Para a UI refletir na hora, buscamos os itens desse pedido:
             if (newStatus === 'CANCELADO') {
-                const order = (orders as Order[]).find(o => o.id === orderId);
-                if (order && order.status !== 'CANCELADO') {
+                const { data: orderData } = await supabase.from('orders').select('items, status').eq('id', orderId).single();
+                if (orderData && orderData.status !== 'CANCELADO') {
                     setters.setProducts(prev => prev.map(p => {
-                        const item = order.items.find(i => i.productId === p.id);
+                        const item = orderData.items.find((i: any) => i.productId === p.id);
                         return item ? { ...p, stock: p.stock + item.quantity } : p;
                     }));
                 }
