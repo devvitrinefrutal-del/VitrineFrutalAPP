@@ -323,6 +323,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                         <tr className="border-b border-gray-100 text-[9px] font-black uppercase text-gray-400 tracking-widest">
                                             <th className="pb-4">Produto</th>
                                             <th className="pb-4 text-center">Preço</th>
+                                            <th className="pb-4 text-center">Vendas</th>
                                             <th className="pb-4 text-center">Estoque</th>
                                             <th className="pb-4 text-right">Status</th>
                                         </tr>
@@ -332,6 +333,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                             <tr key={p.id} className="group hover:bg-gray-50">
                                                 <td className="py-4 font-black text-xs uppercase">{p.name}</td>
                                                 <td className="py-4 text-center text-xs font-bold">R$ {p.price.toFixed(2)}</td>
+                                                <td className="py-4 text-center">
+                                                    <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                                                        {orders
+                                                            .filter(o => o.storeId === currentStore?.id && o.status !== 'CANCELADO' && o.createdAt.startsWith(new Date().toLocaleDateString('sv-SE')))
+                                                            .reduce((acc, o) => acc + (o.items.find(i => i.productId === p.id)?.quantity || 0), 0)
+                                                        } vendidos
+                                                    </span>
+                                                </td>
                                                 <td className="py-4 text-center text-xs font-bold">{p.stock}</td>
                                                 <td className="py-4 text-right">
                                                     <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${p.stock < 5 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
