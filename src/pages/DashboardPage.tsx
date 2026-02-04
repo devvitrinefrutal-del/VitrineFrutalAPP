@@ -123,6 +123,25 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         }
     };
 
+    const [isSendingDigest, setIsSendingDigest] = useState(false);
+    const handleSendDigestNow = async () => {
+        if (!confirm('Deseja disparar o Resumão Cultural para todos os clientes agora?')) return;
+
+        setIsSendingDigest(true);
+        try {
+            const { supabase } = await import('../../supabaseClient');
+            const { data, error } = await supabase.functions.invoke('cultural-digest');
+
+            if (error) throw error;
+            alert('Newsletter disparada com sucesso!');
+        } catch (err: any) {
+            console.error(err);
+            alert('Erro ao disparar: ' + err.message);
+        } finally {
+            setIsSendingDigest(false);
+        }
+    };
+
     return (
         <div className="flex flex-col lg:flex-row gap-8 pb-24 animate-in fade-in">
             {/* Sidebar Navigation */}
@@ -454,10 +473,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 {user.role === 'DEV' && section === 'CULTURAL' && (
                     <div className="space-y-6">
                         <div className="flex justify-between items-center bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm">
-                            <h3 className="text-xl font-black text-black tracking-tight uppercase tracking-widest text-xs">Giro Cultural</h3>
-                            <button onClick={() => { setEditingCulturalItem(null); setModalImages([]); setShowCulturalModal(true); }} className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 shadow-lg hover:bg-emerald-700 transition-all uppercase tracking-[0.2em]">
-                                <Plus size={16} /> Novo Evento
-                            </button>
+                            <div className="flex flex-col gap-1">
+                                <h3 className="text-xl font-black text-black tracking-tight uppercase tracking-widest text-xs">Giro Cultural</h3>
+                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Controle de eventos da cidade</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={handleSendDigestNow}
+                                    disabled={isSendingDigest}
+                                    className="bg-white border-2 border-emerald-600 text-emerald-600 px-6 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 shadow-sm hover:bg-emerald-50 transition-all uppercase tracking-[0.2em] disabled:opacity-50"
+                                >
+                                    {isSendingDigest ? 'Enviando...' : 'Disparar Newsletter Agora'}
+                                </button>
+                                <button onClick={() => { setEditingCulturalItem(null); setModalImages([]); setShowCulturalModal(true); }} className="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 shadow-lg hover:bg-emerald-700 transition-all uppercase tracking-[0.2em]">
+                                    <Plus size={16} /> Novo Evento
+                                </button>
+                            </div>
                         </div>
                         {/* List cultural items */}
                         <div className="grid grid-cols-1 gap-6">

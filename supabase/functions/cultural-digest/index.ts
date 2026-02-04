@@ -5,39 +5,55 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
-    try {
-        const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
 
-        // 1. Get items from last 7 days
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  try {
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-        const { data: items, error: itemsError } = await supabase
-            .from("cultural_items")
-            .select("*")
-            .gt("created_at", sevenDaysAgo.toISOString());
+    // 1. Get items from last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        if (itemsError) throw itemsError;
-        if (!items || items.length === 0) {
-            return new Response(JSON.stringify({ message: "No new items found" }), { status: 200 });
-        }
+    const { data: items, error: itemsError } = await supabase
+      .from("cultural_items")
+      .select("*")
+      .gt("created_at", sevenDaysAgo.toISOString());
 
-        // 2. Get all client emails
-        const { data: profiles, error: profilesError } = await supabase
-            .from("profiles")
-            .select("email")
-            .eq("role", "CLIENTE");
+    if (itemsError) throw itemsError;
+    if (!items || items.length === 0) {
+      return new Response(JSON.stringify({ message: "No new items found" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
-        if (profilesError) throw profilesError;
-        const emails = profiles.map((p: any) => p.email).filter(Boolean);
+    // 2. Get all client emails
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("role", "CLIENTE");
 
-        if (emails.length === 0) {
-            return new Response(JSON.stringify({ message: "No subscribers found" }), { status: 200 });
-        }
+    if (profilesError) throw profilesError;
+    const emails = profiles.map((p: any) => p.email).filter(Boolean);
 
-        // 3. Build HTML Template
-        const itemsHtml = items.map(item => `
+    if (emails.length === 0) {
+      return new Response(JSON.stringify({ message: "No subscribers found" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    // 3. Build HTML Template
+    const itemsHtml = items.map(item => `
       <div style="margin-bottom: 40px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
         <img src="${item.image}" style="width: 100%; border-radius: 20px; margin-bottom: 15px;" />
         <h2 style="font-size: 20px; font-weight: 900; text-transform: uppercase; color: #1a1a1a; margin: 0 0 10px 0;">${item.title}</h2>
@@ -46,7 +62,7 @@ serve(async (req) => {
       </div>
     `).join('');
 
-        const mainHtml = `
+    const mainHtml = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -80,31 +96,31 @@ serve(async (req) => {
       </html>
     `;
 
-        // 4. Send via Resend
-        const res = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${RESEND_API_KEY}`,
-            },
-            body: JSON.stringify({
-                from: "Giro Cultural <onboarding@resend.dev>",
-                to: emails,
-                subject: "🎨 Giro Cultural: Novidades da Semana em Frutal!",
-                html: mainHtml,
-            }),
-        });
+    // 4. Send via Resend
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "Giro Cultural <onboarding@resend.dev>",
+        to: emails,
+        subject: "🎨 Giro Cultural: Novidades da Semana em Frutal!",
+        html: mainHtml,
+      }),
+    });
 
-        const resData = await res.json();
-        return new Response(JSON.stringify(resData), {
-            status: 200,
-            headers: { "Content-Type": "application/json" }
-        });
+    const resData = await res.json();
+    return new Response(JSON.stringify(resData), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
 
-    } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" }
-        });
-    }
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
 });
