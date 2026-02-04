@@ -388,7 +388,16 @@ export function useAdminActions(
 
             // O estoque será restaurado via TRIGGER no Banco de Dados
             // quando o status for alterado para 'CANCELADO'.
-            // Mantemos apenas a atualização do status no banco.
+            // Para a UI refletir na hora, buscamos os itens desse pedido:
+            if (newStatus === 'CANCELADO') {
+                const order = (orders as Order[]).find(o => o.id === orderId);
+                if (order && order.status !== 'CANCELADO') {
+                    setters.setProducts(prev => prev.map(p => {
+                        const item = order.items.find(i => i.productId === p.id);
+                        return item ? { ...p, stock: p.stock + item.quantity } : p;
+                    }));
+                }
+            }
 
             const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
             if (error) throw error;
