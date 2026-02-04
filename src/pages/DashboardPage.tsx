@@ -133,7 +133,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             const { data, error } = await supabase.functions.invoke('cultural-digest');
 
             if (error) throw error;
-            alert('Newsletter disparada com sucesso!');
+
+            if (data?.message === "No new items found") {
+                alert('Nenhuma novidade encontrada nos últimos 7 dias. Nada foi enviado.');
+            } else if (data?.message === "No subscribers found") {
+                alert('Nenhum cliente cadastrado para receber.');
+            } else {
+                alert('Newsletter disparada com sucesso!');
+            }
         } catch (err: any) {
             console.error(err);
             alert('Erro ao disparar: ' + err.message);
