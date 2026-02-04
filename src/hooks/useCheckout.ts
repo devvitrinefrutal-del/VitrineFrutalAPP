@@ -113,6 +113,9 @@ export function useCheckout(
 
                     if (prodData && prodData[0]) {
                         const currentStock = prodData[0].stock || 0;
+                        if (currentStock < item.quantity) {
+                            console.warn(`[ESTOQUE] Estoque insuficiente para ${item.name}: Banco=${currentStock}, Necessário=${item.quantity}`);
+                        }
                         const newStock = Math.max(0, currentStock - item.quantity);
 
                         console.log(`[ESTOQUE] Cálculo para ${item.name}: Banco=${currentStock}, Comprado=${item.quantity} -> Novo=${newStock}`);

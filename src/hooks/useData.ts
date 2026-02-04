@@ -131,6 +131,13 @@ export function useData(showError: (msg: string) => void) {
     useEffect(() => {
         fetchData();
 
+        // --- AUTO-REFRESH: Sincronização Periódica ---
+        // Atualiza todos os dados a cada 30 minutos para evitar estoques obsoletos
+        const syncInterval = setInterval(() => {
+            console.log('--- [SISTEMA] Iniciando Sincronização Periódica (30min) ---');
+            fetchData();
+        }, 30 * 60 * 1000);
+
         // --- REALTIME: Notificações Internas ---
         // Escuta novos pedidos em tempo real para o dashboard
         const channel = supabase
@@ -154,6 +161,7 @@ export function useData(showError: (msg: string) => void) {
         const t = setTimeout(() => setIsLoading(false), 8000);
         return () => {
             clearTimeout(t);
+            clearInterval(syncInterval);
             supabase.removeChannel(channel);
         }
     }, [fetchData]);

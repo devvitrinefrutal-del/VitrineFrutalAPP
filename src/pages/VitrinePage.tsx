@@ -180,7 +180,7 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
                 </div>
             )}
 
-            {hasActiveFilters ? (
+            {searchQuery.length > 0 ? (
                 <div className="space-y-8">
                     <div className="flex items-center justify-between px-2">
                         <h2 className="text-xl font-black text-black tracking-tighter uppercase tracking-widest">
