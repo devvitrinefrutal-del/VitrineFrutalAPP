@@ -742,7 +742,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <form onSubmit={handleSaveCulturalWrapper} className="space-y-4">
                     <input name="title" required defaultValue={editingCulturalItem?.title} placeholder="Título do Evento" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
                     <div className="grid grid-cols-2 gap-4">
-                        <input name="type" required defaultValue={editingCulturalItem?.type} placeholder="Tipo" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
+                        <select name="type" required defaultValue={editingCulturalItem?.type || 'EVENTO'} className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold text-sm">
+                            <option value="EVENTO">EVENTO</option>
+                            <option value="NOTICIA">NOTÍCIA</option>
+                            <option value="DICA">DICA</option>
+                            <option value="GASTRONOMIA">GASTRONOMIA</option>
+                        </select>
                         <input name="date" required defaultValue={editingCulturalItem?.date} placeholder="Data" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold" />
                     </div>
                     <textarea name="description" required defaultValue={editingCulturalItem?.description} placeholder="Descrição Detalhada" className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold h-24 resize-none" />
