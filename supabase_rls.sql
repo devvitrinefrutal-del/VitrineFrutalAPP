@@ -16,6 +16,9 @@ DO $$
 DECLARE 
     r RECORD;
 BEGIN
+    -- Garantir a remoção da política específica reportada como insegura
+    DROP POLICY IF EXISTS "Permitir inserção de pedidos" ON public.orders;
+    
     FOR r IN (SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public') 
     LOOP
         EXECUTE 'DROP POLICY IF EXISTS ' || quote_ident(r.policyname) || ' ON ' || quote_ident(r.tablename);
