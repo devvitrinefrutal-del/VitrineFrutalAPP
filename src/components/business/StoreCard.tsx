@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, ChevronRight } from 'lucide-react';
+import { Star, ChevronRight, Truck } from 'lucide-react';
 import { Store, StoreRating } from '../../../types';
 
 interface StoreCardProps {
@@ -35,9 +35,15 @@ export const StoreCard: React.FC<StoreCardProps> = ({ store, ratings, onClick })
                 <h3 className="font-black text-3xl text-black group-hover:text-green-600 transition-colors uppercase tracking-tighter leading-none mb-2">
                     {store.name}
                 </h3>
-                <p className="text-gray-400 text-[10px] mb-6 font-black uppercase tracking-[0.2em]">
+                <p className="text-gray-400 text-[10px] mb-4 font-black uppercase tracking-[0.2em]">
                     {store.category}
                 </p>
+                <div className="flex items-center gap-2 mb-6 text-gray-500">
+                    <div className="px-3 py-1 bg-gray-50 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                        <Truck size={12} className="text-orange-500" />
+                        {store.deliveryFee && store.deliveryFee > 0 ? `Taxa: R$ ${store.deliveryFee.toFixed(2)}` : 'Entrega Grátis'}
+                    </div>
+                </div>
                 <div className="mt-auto font-black text-green-600 text-[10px] flex items-center gap-2 group-hover:gap-4 transition-all uppercase tracking-[0.2em]">
                     Ver Coleção Completa <ChevronRight size={18} />
                 </div>

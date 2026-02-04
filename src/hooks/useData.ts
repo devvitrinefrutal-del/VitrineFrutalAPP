@@ -48,6 +48,7 @@ export function useData(showError: (msg: string) => void) {
                 ownerId: s.owner_id,
                 neighborhood: s.neighborhood,
                 hasDelivery: s.has_delivery,
+                deliveryFee: s.delivery_fee,
                 latitude: s.latitude,
                 longitude: s.longitude
             })));
