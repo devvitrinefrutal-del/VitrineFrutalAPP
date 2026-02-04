@@ -92,6 +92,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                                     <div className="pr-8">
                                         <h4 className="font-black text-black leading-tight uppercase tracking-tighter mb-1">{item.name}</h4>
                                         <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Unitário: R$ {item.price.toFixed(2)}</p>
+                                        <p className="text-orange-500 text-[10px] font-black uppercase tracking-widest mt-0.5">Disponível em Estoque: {item.stock}</p>
                                     </div>
                                     <div className="flex items-center gap-4 mt-2">
                                         <div className="flex items-center bg-gray-50 rounded-xl p-1">

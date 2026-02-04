@@ -8,6 +8,7 @@ export interface CartItem {
     quantity: number;
     image: string;
     storeId: string;
+    stock: number;
 }
 
 export function useCart() {
@@ -34,7 +35,8 @@ export function useCart() {
                 price: product.price,
                 quantity: 1,
                 image: product.image,
-                storeId: product.storeId
+                storeId: product.storeId,
+                stock: product.stock
             }];
         });
     };
