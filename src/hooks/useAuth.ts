@@ -78,7 +78,6 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
     const login = async (formData: FormData) => {
         const email = (formData.get('email') as string || '').trim().toLowerCase();
         const password = (formData.get('password') as string || '').trim();
-        const isAuthorizedDev = email === 'devvitrinefrutal@gmail.com';
 
         console.log('--- [AUTH] Iniciando login... ---');
 
@@ -91,31 +90,14 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
             }
 
             console.log('[AUTH] Logado com sucesso! Buscando perfil...');
-            let profile = await fetchProfileNativo(data.user.id);
-
-            // DEV Logic
-            if (isAuthorizedDev && (!profile || profile.role !== 'DEV')) {
-                const url = import.meta.env.VITE_SUPABASE_URL;
-                const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-                if (!profile) {
-                    const newDev = { id: data.user.id, name: 'Desenvolvedor Master', email, role: 'DEV', phone: '', document: '', address: '' };
-                    await fetch(`${url}/rest/v1/profiles`, {
-                        method: 'POST',
-                        headers: { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newDev)
-                    });
-                    profile = newDev;
-                } else {
-                    await fetch(`${url}/rest/v1/profiles?id=eq.${data.user.id}`, {
-                        method: 'PATCH',
-                        headers: { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ role: 'DEV' })
-                    });
-                    profile.role = 'DEV';
-                }
-            }
+            const profile = await fetchProfileNativo(data.user.id);
 
             if (profile) {
+                if (profile.is_active === false) {
+                    await supabase.auth.signOut();
+                    showError('Sua conta está aguardando aprovação do administrador.');
+                    return;
+                }
                 setCurrentUser(profile);
                 setShowAuthModal(false);
                 showSuccess('Login realizado!');
@@ -136,30 +118,24 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         try {
             const { data, error } = await supabase.auth.signUp({
                 email, password,
-                options: { data: { full_name: name, role: selectedRole } }
+                options: {
+                    data: {
+                        full_name: name,
+                        role: selectedRole
+                    }
+                }
             });
 
-            if (error) { showError(error.message); return; }
+            if (error) {
+                showError(error.message);
+                return;
+            }
 
             if (data.user) {
-                const url = import.meta.env.VITE_SUPABASE_URL;
-                const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-                const newUser = {
-                    id: data.user.id,
-                    name, email,
-                    role: email === 'devvitrinefrutal@gmail.com' ? 'DEV' : selectedRole,
-                    phone: '', document: '', address: ''
-                };
-
-                await fetch(`${url}/rest/v1/profiles`, {
-                    method: 'POST',
-                    headers: { 'apikey': key, 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newUser)
-                });
-
-                setCurrentUser(newUser as User);
+                showSuccess('Conta criada! Aguarde a aprovação do administrador para acessar.');
                 setShowAuthModal(false);
-                showSuccess('Conta criada!');
+                // Opcional: Se quiser logar automaticamente clientes (que não precisam de aprovação)
+                // Mas no seu caso, melhor manter o padrão de aprovação se todos caem no is_active=false
             }
         } catch (err: any) {
             showError('Erro ao registrar.');
