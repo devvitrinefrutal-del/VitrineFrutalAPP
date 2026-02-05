@@ -97,7 +97,11 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         try {
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
-                console.error('[AUTH] Erro signInWithPassword:', error.message);
+                console.error('[AUTH] Erro signInWithPassword detalhado:', {
+                    message: error.message,
+                    status: (error as any).status,
+                    code: (error as any).code
+                });
                 showError(error.message.includes('Invalid login') ? 'E-mail ou senha incorretos.' : error.message);
                 return;
             }

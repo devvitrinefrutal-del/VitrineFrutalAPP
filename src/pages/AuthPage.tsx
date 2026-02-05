@@ -21,14 +21,22 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose
     const [showEmail, setShowEmail] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (isLoading) return;
+
+        setIsLoading(true);
         const fd = new FormData(e.currentTarget);
-        if (authMode === 'LOGIN') {
-            onLogin(fd);
-        } else {
-            onRegister(fd, 'CLIENTE');
+        try {
+            if (authMode === 'LOGIN') {
+                await onLogin(fd);
+            } else {
+                await onRegister(fd, 'CLIENTE');
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -97,7 +105,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose
                                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest group-hover:text-gray-700 transition-colors">Manter conectado neste dispositivo</span>
                             </label>
 
-                            <button type="submit" className="w-full py-4 bg-orange-500 text-white font-black rounded-2xl hover:bg-orange-600 shadow-xl transition-all uppercase tracking-widest text-xs">Entrar agora</button>
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full py-4 bg-orange-500 text-white font-black rounded-2xl hover:bg-orange-600 shadow-xl transition-all uppercase tracking-widest text-xs disabled:bg-gray-300 disabled:shadow-none"
+                            >
+                                {isLoading ? 'Autenticando...' : 'Entrar agora'}
+                            </button>
                         </form>
                         <div className="pt-4 text-center border-t border-gray-100">
                             <button
@@ -134,7 +148,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose
                                 </button>
                             </div>
                             <p className="text-[10px] text-gray-400 font-medium px-2 uppercase tracking-widest">Cadastro exclusivo para clientes e usuários da plataforma.</p>
-                            <button type="submit" className="w-full py-4 bg-green-600 text-white font-black rounded-2xl hover:bg-green-700 shadow-xl transition-all mt-4 uppercase tracking-widest text-xs">Concluir Registro</button>
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full py-4 bg-green-600 text-white font-black rounded-2xl hover:bg-green-700 shadow-xl transition-all mt-4 uppercase tracking-widest text-xs disabled:bg-gray-300"
+                            >
+                                {isLoading ? 'Criando Conta...' : 'Concluir Registro'}
+                            </button>
                         </form>
                         <div className="pt-4 text-center border-t border-gray-100">
                             <button
