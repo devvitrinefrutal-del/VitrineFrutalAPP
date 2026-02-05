@@ -6,20 +6,19 @@ DROP POLICY IF EXISTS "Public Read Profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Users view own profile and DEVs view all" ON public.profiles;
 DROP POLICY IF EXISTS "Usuários visualizam seu próprio perfil e desenvolvedores visualizam todos" ON public.profiles;
 DROP POLICY IF EXISTS "Allow public to see names of Lojistas and Prestadores" ON public.profiles;
-DROP POLICY IF EXISTS "Permitir ver nomes de Lojistas e Prestadores" ON public.profiles;
 
 -- 2. Criar nova política de segurança (SEM RECURSIVIDADE)
--- O check de 'DEV' agora usa auth.uid() diretamente para evitar loop infinito
+-- Usamos auth.jwt() para checar o role do usuário sem precisar ler a própria tabela profiles de novo.
 CREATE POLICY "Users view own profile and DEVs view all" ON public.profiles
   FOR SELECT
   USING (
     auth.uid() = id 
     OR 
-    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'DEV'
+    (auth.jwt() -> 'user_metadata' ->> 'role') = 'DEV'
   );
 
 -- 3. Permitir ver nomes públicos de Lojistas e Prestadores para a Vitrine funcionar
-CREATE POLICY "Allow public to see names of Lojistas and Prestadores" ON public.profiles
+CREATE POLICY "Allow public to see names of Lojistas e Prestadores" ON public.profiles
   FOR SELECT
   USING (role IN ('LOJISTA', 'PRESTADOR'));
 

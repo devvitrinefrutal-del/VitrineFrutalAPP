@@ -36,19 +36,26 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
     const fetchProfile = async (userId: string, retries = 3): Promise<User | null> => {
         for (let i = 0; i < retries; i++) {
             try {
-                const { data, error } = await supabase
+                // Timeout 5s for the profile check itself
+                const profilePromise = supabase
                     .from('profiles')
                     .select('*')
                     .eq('id', userId)
                     .single();
+
+                const fetchTimeout = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('TIMEOUT')), 5000)
+                );
+
+                const { data, error } = await Promise.race([profilePromise, fetchTimeout]) as any;
 
                 if (data) return data as User;
 
                 if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
                     console.error('[AUTH] Erro ao buscar perfil:', error.message);
                 }
-            } catch (e) {
-                console.error('[AUTH] Erro inesperado ao buscar perfil:', e);
+            } catch (e: any) {
+                console.error('[AUTH] Erro ou Timeout ao buscar perfil:', e.message || e);
             }
 
             // Wait 1 second before retrying if not found
