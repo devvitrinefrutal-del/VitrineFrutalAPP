@@ -32,39 +32,25 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
     }, [currentUser, rememberMe]);
 
     // Helper for profile fetch using the official client (respects RLS)
-    // Now with retries to handle database trigger delays (max 3 attempts)
-    const fetchProfile = async (userId: string, retries = 3): Promise<User | null> => {
-        for (let i = 0; i < retries; i++) {
-            try {
-                // Timeout 5s for the profile check itself
-                const profilePromise = supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', userId)
-                    .single();
+    const fetchProfile = async (userId: string): Promise<User | null> => {
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .single();
 
-                const fetchTimeout = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('TIMEOUT')), 5000)
-                );
-
-                const { data, error } = await Promise.race([profilePromise, fetchTimeout]) as any;
-
-                if (data) return data as User;
-
-                if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+            if (error) {
+                if (error.code !== 'PGRST116') {
                     console.error('[AUTH] Erro ao buscar perfil:', error.message);
                 }
-            } catch (e: any) {
-                console.error('[AUTH] Erro ou Timeout ao buscar perfil:', e.message || e);
+                return null;
             }
-
-            // Wait 1 second before retrying if not found
-            if (i < retries - 1) {
-                console.log(`[AUTH] Perfil não encontrado. Tentando novamente em 1s... (Tentativa ${i + 2}/${retries})`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
+            return data as User;
+        } catch (e) {
+            console.error('[AUTH] Erro inesperado ao buscar perfil:', e);
+            return null;
         }
-        return null;
     };
 
     // Supabase Auth Listener
@@ -72,9 +58,7 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
                 const profile = await fetchProfile(session.user.id);
-                if (profile) {
-                    setCurrentUser(profile);
-                }
+                if (profile) setCurrentUser(profile);
             } else if (event === 'SIGNED_OUT') {
                 setCurrentUser(null);
             }
@@ -86,7 +70,7 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         try {
             await supabase.auth.signOut();
         } catch (e) {
-            console.error('Erro ao sair do Supabase:', e);
+            console.error('Erro ao sair:', e);
         }
         localStorage.removeItem('vitrine_user');
         setCurrentUser(null);
@@ -99,43 +83,21 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         const email = (formData.get('email') as string || '').trim().toLowerCase();
         const password = (formData.get('password') as string || '');
 
-        console.log('--- [DEBUG AUTH] 1. Iniciando login... ---');
-        console.log(`[DEBUG AUTH] 2. Email: ${email}`);
-
         try {
-            // Failsafe timeout 15s
-            const loginPromise = supabase.auth.signInWithPassword({ email, password });
-            const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) =>
-                setTimeout(() => reject(new Error('TIMEOUT_EXCEEDED')), 15000)
-            );
-
-            console.log('[DEBUG AUTH] 3. Chamando Supabase Auth...');
-
-            // Race between actual login and 15s timeout
-            const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
-
-            console.log('[DEBUG AUTH] 4. Supabase respondeu!');
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
             if (error) {
-                console.error('[DEBUG AUTH] 5. Erro no login:', error.message);
                 showError(error.message.includes('Invalid login') ? 'E-mail ou senha incorretos.' : error.message);
                 return;
             }
 
-            if (!data.user) {
-                console.error('[DEBUG AUTH] 6. Usuário nulo após login');
-                showError('Erro interno: Usuário não retornado.');
-                return;
-            }
+            if (!data.user) return;
 
-            console.log(`[DEBUG AUTH] 7. Logado! Buscando perfil para ID: ${data.user.id}`);
             const profile = await fetchProfile(data.user.id);
 
             if (profile) {
-                console.log(`[DEBUG AUTH] 8. Perfil carregado: ${profile.role}`);
                 const needsApproval = ['LOJISTA', 'PRESTADOR'].includes(profile.role);
                 if (needsApproval && profile.is_active === false) {
-                    console.warn(`[DEBUG AUTH] Negado: Inativo.`);
                     await supabase.auth.signOut();
                     showError('Sua conta está aguardando aprovação.');
                     return;
@@ -144,16 +106,11 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
                 setShowAuthModal(false);
                 showSuccess('Bem-vindo!');
             } else {
-                console.error(`[DEBUG AUTH] 9. Perfil NÃO existe no banco.`);
-                showError('Perfil não encontrado no banco de dados.');
+                showError('Perfil não encontrado.');
             }
-        } catch (err: any) {
-            console.error('[DEBUG AUTH] Erro Crítico:', err);
-            if (err.message === 'TIMEOUT_EXCEEDED') {
-                showError('A conexão com o servidor demorou muito. Verifique sua internet.');
-            } else {
-                showError('Erro inesperado no sistema de login.');
-            }
+        } catch (err) {
+            console.error('[AUTH] Erro fatal:', err);
+            showError('Erro de conexão no login.');
         }
     };
 
