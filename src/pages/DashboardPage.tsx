@@ -256,11 +256,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                             </div>
                             <Package className="absolute -bottom-4 -right-4 text-green-500 opacity-50" size={150} />
                         </div>
-                        <OrderManager
-                            orders={orders}
-                            currentStore={currentStore!}
-                            onUpdateStatus={actions.updateOrderStatus}
-                        />
+
+                        {currentStore ? (
+                            <OrderManager
+                                orders={orders}
+                                currentStore={currentStore}
+                                onUpdateStatus={actions.updateOrderStatus}
+                            />
+                        ) : (
+                            <div className="bg-white p-12 rounded-[3rem] border border-gray-100 shadow-sm text-center">
+                                <StoreIcon size={48} className="mx-auto text-gray-200 mb-4" />
+                                <h4 className="text-lg font-black text-black uppercase tracking-tight mb-2">Sua loja ainda não está configurada</h4>
+                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-6">Você precisa configurar sua loja para começar a receber pedidos.</p>
+                                <button
+                                    onClick={() => { setModalImages([]); setShowStoreModal(true); }}
+                                    className="bg-orange-500 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-orange-600 transition-all"
+                                >
+                                    Configurar Minha Loja Agora
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -269,148 +284,164 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     <div className="space-y-6">
                         <div className="flex justify-between items-center bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm">
                             <h3 className="text-xl font-black text-black tracking-tight uppercase tracking-widest text-xs">Meu Acervo</h3>
-                            <button onClick={() => { setEditingProduct(null); setShowProductModal(true); }} className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 shadow-lg hover:bg-orange-600 transition-all uppercase tracking-[0.2em]">
-                                <Plus size={16} /> Novo Item
-                            </button>
+                            {currentStore && (
+                                <button onClick={() => { setEditingProduct(null); setShowProductModal(true); }} className="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] flex items-center gap-2 shadow-lg hover:bg-orange-600 transition-all uppercase tracking-[0.2em]">
+                                    <Plus size={16} /> Novo Item
+                                </button>
+                            )}
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {products.filter(p => p.storeId === currentStore?.id).map(p => (
-                                <div key={p.id} className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col group">
-                                    <div className="overflow-hidden rounded-2xl mb-4 aspect-square relative">
-                                        <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                        <div className="absolute top-2 right-2 flex gap-2">
-                                            <button
-                                                onClick={() => {
-                                                    if (confirm('Tem certeza que deseja excluir este produto?')) {
-                                                        actions.deleteProduct(p.id, p.storeId);
-                                                    }
-                                                }}
-                                                className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-red-500 hover:text-red-700 hover:bg-red-50 transition-all"
-                                                title="Excluir produto"
-                                            >
-                                                <Trash2 size={12} />
-                                            </button>
-                                            <button onClick={() => { setEditingProduct(p); setShowProductModal(true); }} className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-orange-500 hover:text-orange-600"><Edit2 size={12} /></button>
+                        {!currentStore ? (
+                            <div className="bg-white p-12 rounded-[3rem] border border-gray-100 shadow-sm text-center">
+                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Configure sua loja primeiro para gerenciar produtos.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                {products.filter(p => p.storeId === currentStore?.id).map(p => (
+                                    <div key={p.id} className="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-lg transition-all flex flex-col group">
+                                        <div className="overflow-hidden rounded-2xl mb-4 aspect-square relative">
+                                            <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                            <div className="absolute top-2 right-2 flex gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        if (confirm('Tem certeza que deseja excluir este produto?')) {
+                                                            actions.deleteProduct(p.id, p.storeId);
+                                                        }
+                                                    }}
+                                                    className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-red-500 hover:text-red-700 hover:bg-red-50 transition-all"
+                                                    title="Excluir produto"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                                <button onClick={() => { setEditingProduct(p); setShowProductModal(true); }} className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm text-orange-500 hover:text-orange-600"><Edit2 size={12} /></button>
+                                            </div>
+                                        </div>
+                                        <h4 className="font-black text-black truncate mb-1 text-[10px] uppercase tracking-tighter">{p.name}</h4>
+                                        <div className="mt-auto flex justify-between items-center">
+                                            <span className="text-sm font-black text-green-600">R$ {p.price.toFixed(2)}</span>
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Qtd: {p.stock}</span>
                                         </div>
                                     </div>
-                                    <h4 className="font-black text-black truncate mb-1 text-[10px] uppercase tracking-tighter">{p.name}</h4>
-                                    <div className="mt-auto flex justify-between items-center">
-                                        <span className="text-sm font-black text-green-600">R$ {p.price.toFixed(2)}</span>
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Qtd: {p.stock}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* LOJISTA: STOCK (Simplified Table) */}
                 {user.role === 'LOJISTA' && section === 'STOCK' && (
                     <div className="space-y-6">
-                        {/* Finance Summary Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
-                                    <ShoppingBag size={12} className="text-orange-500" /> Inventário Total
-                                </h4>
-                                <p className="text-2xl font-black text-black">
-                                    R$ {products.filter(p => p.storeId === currentStore?.id)
-                                        .reduce((acc, p) => acc + (p.price * p.stock), 0)
-                                        .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </p>
+                        {!currentStore ? (
+                            <div className="bg-white p-12 rounded-[3rem] border border-gray-100 shadow-sm text-center">
+                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Configure sua loja primeiro para visualizar o estoque.</p>
                             </div>
+                        ) : (
+                            <>
+                                {/* Finance Summary Cards */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm">
+                                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
+                                            <ShoppingBag size={12} className="text-orange-500" /> Inventário Total
+                                        </h4>
+                                        <p className="text-2xl font-black text-black">
+                                            R$ {products.filter(p => p.storeId === currentStore?.id)
+                                                .reduce((acc, p) => acc + (p.price * p.stock), 0)
+                                                .toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </p>
+                                    </div>
 
-                            <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm relative group">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
-                                    <DollarSign size={12} className="text-green-500" /> Faturado Hoje
-                                </h4>
-                                <p className="text-2xl font-black text-green-600">
-                                    R$ {(() => {
-                                        const today = new Date().toISOString().split('T')[0];
-                                        const ordersToday = orders.filter(o =>
-                                            o.storeId === currentStore?.id &&
-                                            o.status === 'ENTREGUE' &&
-                                            o.createdAt.startsWith(today)
-                                        );
-                                        const revenue = ordersToday.reduce((acc, o) => acc + o.total, 0);
-                                        return (revenue + (currentStore?.dailyRevenueAdj || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-                                    })()}
-                                </p>
-                                <button
-                                    onClick={() => { setFinanceType('DAILY'); setShowFinanceModal(true); }}
-                                    className="absolute top-4 right-4 text-[8px] font-black uppercase text-gray-400 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 px-2 py-1 rounded-md"
-                                >
-                                    Corrigir
-                                </button>
-                            </div>
+                                    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm relative group">
+                                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
+                                            <DollarSign size={12} className="text-green-500" /> Faturado Hoje
+                                        </h4>
+                                        <p className="text-2xl font-black text-green-600">
+                                            R$ {(() => {
+                                                const today = new Date().toISOString().split('T')[0];
+                                                const ordersToday = orders.filter(o =>
+                                                    o.storeId === currentStore?.id &&
+                                                    o.status === 'ENTREGUE' &&
+                                                    o.createdAt.startsWith(today)
+                                                );
+                                                const revenue = ordersToday.reduce((acc, o) => acc + o.total, 0);
+                                                return (revenue + (currentStore?.dailyRevenueAdj || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                                            })()}
+                                        </p>
+                                        <button
+                                            onClick={() => { setFinanceType('DAILY'); setShowFinanceModal(true); }}
+                                            className="absolute top-4 right-4 text-[8px] font-black uppercase text-gray-400 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 px-2 py-1 rounded-md"
+                                        >
+                                            Corrigir
+                                        </button>
+                                    </div>
 
-                            <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm relative group">
-                                <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
-                                    <Calendar size={12} className="text-blue-500" /> Faturado no Mês
-                                </h4>
-                                <p className="text-2xl font-black text-blue-600">
-                                    R$ {(() => {
-                                        const now = new Date();
-                                        const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                                        const ordersMonth = orders.filter(o =>
-                                            o.storeId === currentStore?.id &&
-                                            o.status === 'ENTREGUE' &&
-                                            o.createdAt.startsWith(month)
-                                        );
-                                        const revenue = ordersMonth.reduce((acc, o) => acc + o.total, 0);
-                                        // INTERCONEXÃO: O ajuste mensal total inclui o ajuste de Hoje
-                                        const totalAdj = (currentStore?.monthlyRevenueAdj || 0) + (currentStore?.dailyRevenueAdj || 0);
-                                        return (revenue + totalAdj).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-                                    })()}
-                                </p>
-                                <button
-                                    onClick={() => { setFinanceType('MONTHLY'); setShowFinanceModal(true); }}
-                                    className="absolute top-4 right-4 text-[8px] font-black uppercase text-gray-400 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 px-2 py-1 rounded-md"
-                                >
-                                    Corrigir
-                                </button>
-                            </div>
-                        </div>
+                                    <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm relative group">
+                                        <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-2 flex items-center gap-2">
+                                            <Calendar size={12} className="text-blue-500" /> Faturado no Mês
+                                        </h4>
+                                        <p className="text-2xl font-black text-blue-600">
+                                            R$ {(() => {
+                                                const now = new Date();
+                                                const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                                                const ordersMonth = orders.filter(o =>
+                                                    o.storeId === currentStore?.id &&
+                                                    o.status === 'ENTREGUE' &&
+                                                    o.createdAt.startsWith(month)
+                                                );
+                                                const revenue = ordersMonth.reduce((acc, o) => acc + o.total, 0);
+                                                // INTERCONEXÃO: O ajuste mensal total inclui o ajuste de Hoje
+                                                const totalAdj = (currentStore?.monthlyRevenueAdj || 0) + (currentStore?.dailyRevenueAdj || 0);
+                                                return (revenue + totalAdj).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                                            })()}
+                                        </p>
+                                        <button
+                                            onClick={() => { setFinanceType('MONTHLY'); setShowFinanceModal(true); }}
+                                            className="absolute top-4 right-4 text-[8px] font-black uppercase text-gray-400 hover:text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 px-2 py-1 rounded-md"
+                                        >
+                                            Corrigir
+                                        </button>
+                                    </div>
+                                </div>
 
-                        <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden">
-                            <h3 className="text-lg font-black text-black mb-6 tracking-widest text-xs uppercase">Inventário Detalhado</h3>
-                            {/* Table simplified for brevity, similar to original but cleaner */}
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left min-w-[500px]">
-                                    <thead>
-                                        <tr className="border-b border-gray-100 text-[9px] font-black uppercase text-gray-400 tracking-widest">
-                                            <th className="pb-4">Produto</th>
-                                            <th className="pb-4 text-center">Preço</th>
-                                            <th className="pb-4 text-center">Vendas</th>
-                                            <th className="pb-4 text-center">Estoque</th>
-                                            <th className="pb-4 text-right">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {products.filter(p => p.storeId === currentStore?.id).map(p => (
-                                            <tr key={p.id} className="group hover:bg-gray-50">
-                                                <td className="py-4 font-black text-xs uppercase">{p.name}</td>
-                                                <td className="py-4 text-center text-xs font-bold">R$ {p.price.toFixed(2)}</td>
-                                                <td className="py-4 text-center">
-                                                    <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">
-                                                        {orders
-                                                            .filter(o => o.storeId === currentStore?.id && o.status !== 'CANCELADO' && o.createdAt.startsWith(new Date().toLocaleDateString('sv-SE')))
-                                                            .reduce((acc, o) => acc + (o.items.find(i => i.productId === p.id)?.quantity || 0), 0)
-                                                        } vendidos
-                                                    </span>
-                                                </td>
-                                                <td className="py-4 text-center text-xs font-bold">{p.stock}</td>
-                                                <td className="py-4 text-right">
-                                                    <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${p.stock < 5 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-                                                        {p.stock < 5 ? 'Baixo' : 'Ok'}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                                <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden">
+                                    <h3 className="text-lg font-black text-black mb-6 tracking-widest text-xs uppercase">Inventário Detalhado</h3>
+                                    {/* Table simplified for brevity, similar to original but cleaner */}
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left min-w-[500px]">
+                                            <thead>
+                                                <tr className="border-b border-gray-100 text-[9px] font-black uppercase text-gray-400 tracking-widest">
+                                                    <th className="pb-4">Produto</th>
+                                                    <th className="pb-4 text-center">Preço</th>
+                                                    <th className="pb-4 text-center">Vendas</th>
+                                                    <th className="pb-4 text-center">Estoque</th>
+                                                    <th className="pb-4 text-right">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-50">
+                                                {products.filter(p => p.storeId === currentStore?.id).map(p => (
+                                                    <tr key={p.id} className="group hover:bg-gray-50">
+                                                        <td className="py-4 font-black text-xs uppercase">{p.name}</td>
+                                                        <td className="py-4 text-center text-xs font-bold">R$ {p.price.toFixed(2)}</td>
+                                                        <td className="py-4 text-center">
+                                                            <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                                                                {orders
+                                                                    .filter(o => o.storeId === currentStore?.id && o.status !== 'CANCELADO' && o.createdAt.startsWith(new Date().toLocaleDateString('sv-SE')))
+                                                                    .reduce((acc, o) => acc + (o.items.find(i => i.productId === p.id)?.quantity || 0), 0)
+                                                                } vendidos
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-4 text-center text-xs font-bold">{p.stock}</td>
+                                                        <td className="py-4 text-right">
+                                                            <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${p.stock < 5 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                                                                {p.stock < 5 ? 'Baixo' : 'Ok'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
 
