@@ -75,7 +75,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         e.preventDefault();
         setIsSaving(true);
         const fd = new FormData(e.currentTarget);
-        const success = await actions.saveStore(fd, modalImages[0] || null, currentStore);
+        const success = await actions.saveStore(fd, modalImages[0] || null, editingStore);
         setIsSaving(false);
         if (success) setShowStoreModal(false);
     };
@@ -102,7 +102,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             updateData.set('monthlyRevenueAdj', value.toString());
         }
 
-        const success = await actions.saveStore(updateData, null, currentStore);
+        const success = await actions.saveStore(updateData, null, editingStore || currentStore);
         setIsSaving(false);
         if (success) setShowFinanceModal(false);
     };
@@ -447,14 +447,40 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {stores.map(s => (
-                                <div key={s.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex gap-6 items-center">
-                                    <img src={s.image} className="w-20 h-20 rounded-2xl object-cover" />
-                                    <div className="flex-1">
-                                        <h4 className="font-black text-black uppercase tracking-tight text-sm">{s.name}</h4>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">{s.category}</p>
-                                        <button onClick={() => { setEditingStore(s); setModalImages(s.image ? [s.image] : []); setShowStoreModal(true); }} className="text-orange-600 text-[10px] font-black uppercase tracking-widest hover:underline flex items-center gap-1">
-                                            <Edit2 size={12} /> Editar
-                                        </button>
+                                <div key={s.id} className={`bg-white p-6 rounded-[2.5rem] border ${s.isActive === false ? 'border-red-200 bg-red-50/10' : 'border-gray-100'} shadow-sm flex gap-6 items-center flex-wrap md:flex-nowrap`}>
+                                    <img src={s.image} className={`w-20 h-20 rounded-2xl object-cover ${s.isActive === false ? 'grayscale opacity-50' : ''}`} />
+                                    <div className="flex-1 min-w-[200px]">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h4 className="font-black text-black uppercase tracking-tight text-sm">{s.name}</h4>
+                                            {s.isActive === false && (
+                                                <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[8px] font-black rounded-lg uppercase tracking-widest">Pausada</span>
+                                            )}
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-3">{s.category}</p>
+
+                                        <div className="flex flex-wrap gap-4 items-center">
+                                            <button onClick={() => { setEditingStore(s); setModalImages(s.image ? [s.image] : []); setShowStoreModal(true); }} className="text-orange-600 text-[10px] font-black uppercase tracking-widest hover:underline flex items-center gap-1">
+                                                <Edit2 size={12} /> Editar
+                                            </button>
+
+                                            <button
+                                                onClick={() => actions.toggleStoreActive(s.id, !!s.isActive)}
+                                                className={`${s.isActive === false ? 'text-green-600' : 'text-gray-500'} text-[10px] font-black uppercase tracking-widest hover:underline flex items-center gap-1`}
+                                            >
+                                                <Package size={12} /> {s.isActive === false ? 'Ativar Loia' : 'Pausar Loja'}
+                                            </button>
+
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm(`DESEJA EXCLUIR PERMANENTEMENTE A LOJA "${s.name.toUpperCase()}"? Esta ação não pode ser desfeita.`)) {
+                                                        actions.deleteStore(s.id);
+                                                    }
+                                                }}
+                                                className="text-red-600 text-[10px] font-black uppercase tracking-widest hover:underline flex items-center gap-1"
+                                            >
+                                                <Trash2 size={12} /> Excluir
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -605,13 +631,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <form onSubmit={handleSaveStoreWrapper} className="space-y-6">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Nome da Loja</label>
-                        <input name="name" required defaultValue={currentStore?.name} placeholder="Nome da Loja" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold focus:ring-2 ring-orange-100 transition-all text-sm" />
+                        <input key={editingStore?.id || 'new'} name="name" required defaultValue={editingStore?.name} placeholder="Nome da Loja" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold focus:ring-2 ring-orange-100 transition-all text-sm" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Categoria</label>
-                            <select name="category" required defaultValue={currentStore?.category} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
+                            <select key={editingStore?.id || 'new'} name="category" required defaultValue={editingStore?.category} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
                                 <option value="">Escolha...</option>
                                 <option value="Moda e Acessórios">Moda e Acessórios</option>
                                 <option value="Casa e Decoração">Casa e Decoração</option>
@@ -626,7 +652,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Bairro</label>
-                            <select name="neighborhood" required defaultValue={currentStore?.neighborhood} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
+                            <select key={editingStore?.id || 'new'} name="neighborhood" required defaultValue={editingStore?.neighborhood} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
                                 <option value="">Escolha...</option>
                                 <optgroup label="Centro e Arredores">
                                     <option value="Centro">Centro</option>
@@ -676,11 +702,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">WhatsApp</label>
-                            <input name="whatsapp" required defaultValue={currentStore?.whatsapp} placeholder="WhatsApp" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
+                            <input key={editingStore?.id || 'new'} name="whatsapp" required defaultValue={editingStore?.whatsapp} placeholder="WhatsApp" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Delivery</label>
-                            <select name="hasDelivery" required defaultValue={currentStore?.hasDelivery?.toString()} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
+                            <select key={editingStore?.id || 'new'} name="hasDelivery" required defaultValue={editingStore?.hasDelivery?.toString()} className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm appearance-none focus:ring-2 ring-orange-100 transition-all">
                                 <option value="true">Sim, entregamos</option>
                                 <option value="false">Não fazemos entrega</option>
                             </select>
@@ -690,28 +716,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Latitude (GPS)</label>
-                            <input name="latitude" type="number" step="0.000001" defaultValue={currentStore?.latitude} placeholder="Ex: -20.228" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
+                            <input key={editingStore?.id || 'new'} name="latitude" type="number" step="0.000001" defaultValue={editingStore?.latitude} placeholder="Ex: -20.228" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Longitude (GPS)</label>
-                            <input name="longitude" type="number" step="0.000001" defaultValue={currentStore?.longitude} placeholder="Ex: -48.941" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
+                            <input key={editingStore?.id || 'new'} name="longitude" type="number" step="0.000001" defaultValue={editingStore?.longitude} placeholder="Ex: -48.941" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Taxa de Entrega (R$)</label>
-                            <input name="deliveryFee" type="number" step="0.50" defaultValue={currentStore?.deliveryFee} placeholder="Taxa Entrega" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
+                            <input key={editingStore?.id || 'new'} name="deliveryFee" type="number" step="0.50" defaultValue={editingStore?.deliveryFee} placeholder="Taxa Entrega" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">E-mail</label>
-                            <input name="email" required defaultValue={currentStore?.email} placeholder="E-mail" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
+                            <input key={editingStore?.id || 'new'} name="email" required defaultValue={editingStore?.email} placeholder="E-mail" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold text-sm focus:ring-2 ring-orange-100 transition-all" />
                         </div>
                     </div>
 
                     <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Endereço Completo</label>
-                        <textarea name="address" required defaultValue={currentStore?.address} placeholder="Endereço Completo" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold h-24 resize-none text-sm focus:ring-2 ring-orange-100 transition-all" />
+                        <textarea key={editingStore?.id || 'new'} name="address" required defaultValue={editingStore?.address} placeholder="Endereço Completo" className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold h-24 resize-none text-sm focus:ring-2 ring-orange-100 transition-all" />
                     </div>
 
                     <MultiImageInput max={1} initialImages={modalImages} onImagesChange={setModalImages} showError={showError} />

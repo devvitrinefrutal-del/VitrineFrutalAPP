@@ -246,6 +246,34 @@ export function useAdminActions(
         }
     };
 
+    const toggleStoreActive = async (storeId: string, currentStatus: boolean) => {
+        try {
+            const { error } = await supabase.from('stores').update({ is_active: !currentStatus }).eq('id', storeId);
+            if (error) throw error;
+
+            setters.setStores(prev => prev.map(s => s.id === storeId ? { ...s, isActive: !currentStatus } : s));
+            showSuccess(`Loja ${!currentStatus ? 'ativada' : 'pausada'} com sucesso!`);
+            return true;
+        } catch (error: any) {
+            showError('Erro ao alterar status da loja: ' + error.message);
+            return false;
+        }
+    };
+
+    const deleteStore = async (storeId: string) => {
+        try {
+            const { error } = await supabase.from('stores').delete().eq('id', storeId);
+            if (error) throw error;
+
+            setters.setStores(prev => prev.filter(s => s.id !== storeId));
+            showSuccess('Loja excluída permanentemente!');
+            return true;
+        } catch (error: any) {
+            showError('Erro ao excluir loja: ' + error.message);
+            return false;
+        }
+    };
+
     const syncFinancials = async (store: Store) => {
         const now = new Date();
         const today = now.toISOString().split('T')[0];
@@ -427,6 +455,8 @@ export function useAdminActions(
         updateOrderStatus,
         updateOrderDeliveryFee,
         syncFinancials,
-        deleteProduct
+        deleteProduct,
+        toggleStoreActive,
+        deleteStore
     };
 }

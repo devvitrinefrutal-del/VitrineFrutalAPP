@@ -50,7 +50,8 @@ export function useData(showError: (msg: string) => void) {
                 hasDelivery: s.has_delivery,
                 deliveryFee: s.delivery_fee,
                 latitude: s.latitude,
-                longitude: s.longitude
+                longitude: s.longitude,
+                isActive: s.is_active
             })));
         }
 

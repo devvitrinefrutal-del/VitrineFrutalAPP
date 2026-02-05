@@ -32,6 +32,7 @@ export interface Store {
   longitude?: number;
   dailyRevenueAdj?: number;
   monthlyRevenueAdj?: number;
+  isActive?: boolean;
   lastFinanceUpdate?: string; // ISO Date para controle de resets
 }
 
