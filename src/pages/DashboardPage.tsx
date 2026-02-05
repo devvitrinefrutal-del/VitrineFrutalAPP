@@ -138,6 +138,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 alert('Nenhuma novidade encontrada nos últimos 7 dias. Nada foi enviado.');
             } else if (data?.message === "No subscribers found") {
                 alert('Nenhum cliente cadastrado para receber.');
+            } else if (data?.message === "Resend reject") {
+                alert(`Erro no Resend: ${data.error_details}\n\nNota: Se você usa o plano gratuito, só pode enviar e-mails para o seu próprio e-mail de conta.`);
             } else {
                 alert('Newsletter disparada com sucesso!');
             }

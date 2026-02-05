@@ -117,7 +117,14 @@ serve(async (req) => {
     console.log("Resposta do Resend:", JSON.stringify(resData));
 
     if (!res.ok) {
-      throw new Error(`Erro no Resend: ${resData.message || JSON.stringify(resData)}`);
+      console.error(`Erro no Resend detectado: ${resData.message || JSON.stringify(resData)}`);
+      return new Response(JSON.stringify({
+        error_details: resData.message || JSON.stringify(resData),
+        message: "Resend reject"
+      }), {
+        status: 200, // Retornamos 200 para que o frontend consiga ler o JSON de erro
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
 
     return new Response(JSON.stringify({ success: true, data: resData }), {
