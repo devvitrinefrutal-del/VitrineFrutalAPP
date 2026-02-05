@@ -93,7 +93,8 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
             const profile = await fetchProfileNativo(data.user.id);
 
             if (profile) {
-                if (profile.is_active === false) {
+                const needsApproval = ['LOJISTA', 'PRESTADOR'].includes(profile.role);
+                if (needsApproval && profile.is_active === false) {
                     await supabase.auth.signOut();
                     showError('Sua conta está aguardando aprovação do administrador.');
                     return;

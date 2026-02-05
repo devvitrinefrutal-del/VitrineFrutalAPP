@@ -440,10 +440,32 @@ export function useAdminActions(
         }
     };
 
-    // updateManagerDeliveryFee logic... simpler inline usually but let's include
     const updateOrderDeliveryFee = (orderId: string, fee: number) => {
         setters.setOrders(prev => prev.map(o => o.id === orderId ? { ...o, deliveryFee: fee } : o));
         showSuccess('Taxa de entrega atualizada localmente (salvamento automático pendente)');
+    };
+
+    const submitRating = async (rating: { storeId: string, orderId: string, customerId: string, rating: number, comment?: string }) => {
+        try {
+            const { error } = await supabase.from('store_ratings').insert([{
+                store_id: rating.storeId,
+                order_id: rating.orderId,
+                client_id: rating.customerId,
+                rating: rating.rating,
+                comment: rating.comment
+            }]);
+
+            if (error) {
+                if (error.code === '23505') throw new Error('Você já avaliou este pedido.');
+                throw error;
+            }
+
+            showSuccess('Avaliação enviada com sucesso!');
+            return true;
+        } catch (error: any) {
+            showError('Erro ao enviar avaliação: ' + error.message);
+            return false;
+        }
     };
 
     return {
@@ -457,6 +479,7 @@ export function useAdminActions(
         syncFinancials,
         deleteProduct,
         toggleStoreActive,
-        deleteStore
+        deleteStore,
+        submitRating
     };
 }

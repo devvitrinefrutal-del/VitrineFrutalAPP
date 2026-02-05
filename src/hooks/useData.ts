@@ -35,11 +35,12 @@ export function useData(showError: (msg: string) => void) {
 
         // Carregamento em paralelo usando Fetch Nativo (Bypassing SDK Hang)
         // Carregamento em paralelo otimizado: Produtos não são mais carregados globalmente por padrão
-        const [storesData, servicesData, culturalData, ordersData] = await Promise.all([
+        const [storesData, servicesData, culturalData, ordersData, ratingsData] = await Promise.all([
             fetchTable('stores'),
             fetchTable('services'),
             fetchTable('cultural_items'),
-            fetchTable('orders')
+            fetchTable('orders'),
+            fetchTable('store_ratings')
         ]);
 
         if (storesData) {
@@ -80,6 +81,16 @@ export function useData(showError: (msg: string) => void) {
                 deliveryMethod: o.delivery_method,
                 deliveryFee: o.delivery_fee,
                 createdAt: o.created_at
+            })));
+        }
+
+        if (ratingsData) {
+            setStoreRatings(ratingsData.map((r: any) => ({
+                ...r,
+                storeId: r.store_id,
+                orderId: r.order_id,
+                customerId: r.client_id,
+                createdAt: r.created_at
             })));
         }
 

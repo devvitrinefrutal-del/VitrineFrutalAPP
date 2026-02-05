@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
     LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store as StoreIcon, Heart,
     User as UserIcon, Plus, Edit2, Trash2, Calendar, MapPin, DollarSign, Image as ImageIcon,
-    CheckCircle, X
+    CheckCircle, X, Star
 } from 'lucide-react';
 import { User, Store, Product, Service, CulturalItem, Order } from '../../types';
 import { OrderManager } from '../components/business/OrderManager';
+import { RatingModal } from '../components/modals/RatingModal';
 import { ProductModal } from '../components/modals/ProductModal';
 import { Modal } from '../components/ui/Modal';
 import { MultiImageInput } from '../components/ui/MultiImageInput';
@@ -24,6 +25,19 @@ interface DashboardPageProps {
     stores: Store[]; // Need full list for some checks?
     fetchStoreProducts: (storeId: string) => void;
 }
+
+const NavBtn = ({ active, icon, label, onClick }: { active: boolean, icon: React.ReactNode, label: string, onClick: () => void }) => (
+    <button
+        onClick={onClick}
+        className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-black uppercase text-[10px] tracking-widest ${active
+            ? 'bg-orange-500 text-white shadow-lg shadow-orange-200'
+            : 'text-gray-400 hover:bg-gray-50'
+            }`}
+    >
+        {icon}
+        {label}
+    </button>
+);
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
     user, currentStore, products, services, culturalItems, orders, activeTab,
@@ -123,7 +137,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         }
     };
 
+    const [showRatingModal, setShowRatingModal] = useState(false);
+    const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
     const [isSendingDigest, setIsSendingDigest] = useState(false);
+
     const handleSendDigestNow = async () => {
         if (!confirm('Deseja disparar o Resumão Cultural para todos os clientes agora?')) return;
 
@@ -397,7 +414,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                     </div>
                 )}
 
-                {/* CLIENTE: MY ORDERS */}
                 {user.role === 'CLIENTE' && section === 'MY_ORDERS' && (
                     <div className="space-y-6">
                         <div className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm mb-6">
@@ -427,9 +443,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                                 <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
                                             </div>
                                         ))}
-                                        <div className="flex justify-between text-xs font-black text-black pt-2 border-t border-gray-50 mt-2">
-                                            <span>Total</span>
-                                            <span>R$ {o.total.toFixed(2)}</span>
+                                        <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-50">
+                                            <div className="flex flex-col">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total do Pedido</p>
+                                                <p className="text-xl font-black text-green-600 tracking-tighter">R$ {o.total.toFixed(2)}</p>
+                                            </div>
+                                            {o.status === 'ENTREGUE' && (
+                                                <button
+                                                    onClick={() => { setRatingOrder(o); setShowRatingModal(true); }}
+                                                    className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all active:scale-95"
+                                                >
+                                                    <Star size={14} fill="currentColor" /> Avaliar Loja
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -814,13 +840,25 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </form>
             </Modal>
 
+            {showRatingModal && ratingOrder && (
+                <RatingModal
+                    isOpen={showRatingModal}
+                    onClose={() => { setShowRatingModal(false); setRatingOrder(null); }}
+                    storeName={stores.find(s => s.id === ratingOrder.storeId)?.name || 'nossa loja'}
+                    onSubmit={async (rating, comment) => {
+                        const success = await actions.submitRating({
+                            storeId: ratingOrder.storeId,
+                            orderId: ratingOrder.id,
+                            customerId: user.id,
+                            rating,
+                            comment
+                        });
+                        return success;
+                    }}
+                />
+            )}
+
             {/* MODALS END */}
-        </div >
+        </div>
     );
 };
-
-const NavBtn = ({ active, icon, label, onClick }: { active: boolean, icon: React.ReactNode, label: string, onClick: () => void }) => (
-    <button onClick={onClick} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${active ? 'bg-orange-500 text-white shadow-lg font-black' : 'text-gray-400 hover:bg-gray-50 hover:text-black font-bold'} uppercase text-[10px] tracking-widest`}>
-        {icon} {label}
-    </button>
-);
