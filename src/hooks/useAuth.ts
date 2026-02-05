@@ -92,48 +92,61 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         const email = (formData.get('email') as string || '').trim().toLowerCase();
         const password = (formData.get('password') as string || '').trim();
 
-        console.log('--- [AUTH] Iniciando login... ---');
+        console.log('--- [DEBUG AUTH] 1. Iniciando login... ---');
+        console.log(`[DEBUG AUTH] 2. Email: ${email}`);
 
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            // Failsafe timeout 15s
+            const loginPromise = supabase.auth.signInWithPassword({ email, password });
+            const timeoutPromise = new Promise<{ data: any, error: any }>((_, reject) =>
+                setTimeout(() => reject(new Error('TIMEOUT_EXCEEDED')), 15000)
+            );
+
+            console.log('[DEBUG AUTH] 3. Chamando Supabase Auth...');
+
+            // Race between actual login and 15s timeout
+            const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
+
+            console.log('[DEBUG AUTH] 4. Supabase respondeu!');
+
             if (error) {
-                console.error('[AUTH] Erro signInWithPassword detalhado:', {
-                    message: error.message,
-                    status: (error as any).status,
-                    code: (error as any).code
-                });
+                console.error('[DEBUG AUTH] 5. Erro no login:', error.message);
                 showError(error.message.includes('Invalid login') ? 'E-mail ou senha incorretos.' : error.message);
                 return;
             }
 
             if (!data.user) {
-                console.error('[AUTH] Login bem-sucedido mas data.user é nulo');
-                showError('Erro interno no servidor de autenticação.');
+                console.error('[DEBUG AUTH] 6. Usuário nulo após login');
+                showError('Erro interno: Usuário não retornado.');
                 return;
             }
 
-            console.log(`[AUTH] Logado como ${data.user.email} (ID: ${data.user.id}). Buscando perfil...`);
+            console.log(`[DEBUG AUTH] 7. Logado! Buscando perfil para ID: ${data.user.id}`);
             const profile = await fetchProfile(data.user.id);
 
             if (profile) {
-                console.log(`[AUTH] Perfil encontrado: ${profile.name} (Papel: ${profile.role}, Ativo: ${profile.is_active})`);
+                console.log(`[DEBUG AUTH] 8. Perfil carregado: ${profile.role}`);
                 const needsApproval = ['LOJISTA', 'PRESTADOR'].includes(profile.role);
                 if (needsApproval && profile.is_active === false) {
-                    console.warn(`[AUTH] Acesso negado: Perfil ${profile.role} inativo.`);
+                    console.warn(`[DEBUG AUTH] Negado: Inativo.`);
                     await supabase.auth.signOut();
-                    showError('Sua conta está aguardando aprovação do administrador.');
+                    showError('Sua conta está aguardando aprovação.');
                     return;
                 }
                 setCurrentUser(profile);
                 setShowAuthModal(false);
-                showSuccess('Login realizado!');
+                showSuccess('Bem-vindo!');
             } else {
-                console.error(`[AUTH] PERIGO: Perfil não encontrado na tabela public.profiles para o UID: ${data.user.id}`);
-                showError('Perfil não encontrado. Tente novamente em alguns segundos ou contate o suporte.');
+                console.error(`[DEBUG AUTH] 9. Perfil NÃO existe no banco.`);
+                showError('Perfil não encontrado no banco de dados.');
             }
         } catch (err: any) {
-            console.error('[AUTH] Erro fatal inesperado no login:', err);
-            showError('Erro de conexão no login.');
+            console.error('[DEBUG AUTH] Erro Crítico:', err);
+            if (err.message === 'TIMEOUT_EXCEEDED') {
+                showError('A conexão com o servidor demorou muito. Verifique sua internet.');
+            } else {
+                showError('Erro inesperado no sistema de login.');
+            }
         }
     };
 
