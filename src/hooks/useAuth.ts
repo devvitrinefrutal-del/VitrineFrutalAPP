@@ -31,27 +31,40 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         }
     }, [currentUser, rememberMe]);
 
-    // Helper for native profile fetch
-    const fetchProfileNativo = async (userId: string) => {
-        const url = import.meta.env.VITE_SUPABASE_URL;
-        const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        try {
-            const res = await fetch(`${url}/rest/v1/profiles?id=eq.${userId}&select=*`, {
-                headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
-            });
-            const data = await res.json();
-            return data[0] || null;
-        } catch (e) {
-            console.error('[AUTH] Erro ao buscar perfil nativo:', e);
-            return null;
+    // Helper for profile fetch using the official client (respects RLS)
+    // Now with retries to handle database trigger delays (max 3 attempts)
+    const fetchProfile = async (userId: string, retries = 3): Promise<User | null> => {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+
+                if (data) return data as User;
+
+                if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+                    console.error('[AUTH] Erro ao buscar perfil:', error.message);
+                }
+            } catch (e) {
+                console.error('[AUTH] Erro inesperado ao buscar perfil:', e);
+            }
+
+            // Wait 1 second before retrying if not found
+            if (i < retries - 1) {
+                console.log(`[AUTH] Perfil não encontrado. Tentando novamente em 1s... (Tentativa ${i + 2}/${retries})`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
         }
+        return null;
     };
 
     // Supabase Auth Listener
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
-                const profile = await fetchProfileNativo(session.user.id);
+                const profile = await fetchProfile(session.user.id);
                 if (profile) {
                     setCurrentUser(profile);
                 }
@@ -96,7 +109,7 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
             }
 
             console.log(`[AUTH] Logado como ${data.user.email} (ID: ${data.user.id}). Buscando perfil...`);
-            const profile = await fetchProfileNativo(data.user.id);
+            const profile = await fetchProfile(data.user.id);
 
             if (profile) {
                 console.log(`[AUTH] Perfil encontrado: ${profile.name} (Papel: ${profile.role}, Ativo: ${profile.is_active})`);

@@ -11,6 +11,7 @@ export interface User {
   address?: string;
   storeId?: string;
   serviceId?: string;
+  is_active?: boolean;
 }
 
 export interface Store {
