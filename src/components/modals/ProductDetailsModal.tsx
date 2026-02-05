@@ -17,6 +17,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
     onAddToCart
 }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [touchStart, setTouchStart] = useState<number | null>(null);
 
     if (!product) return null;
 
@@ -24,21 +25,39 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
         ? product.images
         : [product.image];
 
-    const nextImage = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const nextImage = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
         setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
     };
 
-    const prevImage = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const prevImage = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
         setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStart === null) return;
+        const touchEnd = e.changedTouches[0].clientX;
+        const diff = touchStart - touchEnd;
+
+        if (diff > 50) nextImage();
+        if (diff < -50) prevImage();
+        setTouchStart(null);
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="">
             <div className="flex flex-col gap-6 -mt-8">
                 {/* Carousel Area */}
-                <div className="relative aspect-square rounded-[2rem] overflow-hidden bg-gray-50 border border-gray-100 group">
+                <div
+                    className="relative aspect-square rounded-[2rem] overflow-hidden bg-gray-50 border border-gray-100 group touch-pan-y"
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                >
                     <img
                         src={allImages[currentImageIndex]}
                         alt={product.name}
@@ -49,23 +68,25 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                         <>
                             <button
                                 onClick={prevImage}
-                                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/90 backdrop-blur rounded-full shadow-lg text-black opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-500 hover:text-white"
+                                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/90 backdrop-blur rounded-full shadow-lg text-black lg:opacity-0 lg:group-hover:opacity-100 transition-opacity hover:bg-orange-500 hover:text-white z-10"
                             >
                                 <ChevronLeft size={20} />
                             </button>
                             <button
                                 onClick={nextImage}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/90 backdrop-blur rounded-full shadow-lg text-black opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-500 hover:text-white"
+                                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/90 backdrop-blur rounded-full shadow-lg text-black lg:opacity-0 lg:group-hover:opacity-100 transition-opacity hover:bg-orange-500 hover:text-white z-10"
                             >
                                 <ChevronRight size={20} />
                             </button>
 
                             {/* Indicators */}
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                                 {allImages.map((_, i) => (
-                                    <div
+                                    <button
                                         key={i}
-                                        className={`w-2 h-2 rounded-full transition-all ${i === currentImageIndex ? 'w-6 bg-orange-500' : 'bg-white/50 backdrop-blur'}`}
+                                        onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(i); }}
+                                        className={`w-2 h-2 rounded-full transition-all ${i === currentImageIndex ? 'w-6 bg-orange-500' : 'bg-white/50 backdrop-blur hover:bg-white/80'}`}
+                                        aria-label={`Ir para imagem ${i + 1}`}
                                     />
                                 ))}
                             </div>
