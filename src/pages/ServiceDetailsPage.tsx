@@ -1,6 +1,7 @@
-import React from 'react';
-import { ArrowLeft, MessageCircle, MapPin, DollarSign } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, MessageCircle, MapPin, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Service } from '../../types';
+import { getOptimizedImageUrl } from '../utils/storageUtils';
 
 interface ServiceDetailsPageProps {
     service: Service;
@@ -8,10 +9,41 @@ interface ServiceDetailsPageProps {
 }
 
 export const ServiceDetailsPage: React.FC<ServiceDetailsPageProps> = ({ service, onBack }) => {
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+
     const handleWhatsApp = () => {
         const message = `Olá ${service.name}, vi seu perfil no Vitrine Frutal e gostaria de saber mais sobre seus serviços.`;
         const encodedMessage = encodeURIComponent(message);
         window.open(`https://wa.me/${service.whatsapp.replace(/\D/g, '')}?text=${encodedMessage}`, '_blank');
+    };
+
+    const allImages = service.images && service.images.length > 0
+        ? service.images
+        : [service.image];
+
+    const nextImage = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+    };
+
+    const prevImage = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStart === null) return;
+        const touchEnd = e.changedTouches[0].clientX;
+        const diff = touchStart - touchEnd;
+
+        if (diff > 50) nextImage();
+        if (diff < -50) prevImage();
+        setTouchStart(null);
     };
 
     return (
@@ -25,11 +57,47 @@ export const ServiceDetailsPage: React.FC<ServiceDetailsPageProps> = ({ service,
             </button>
 
             <div className="bg-white rounded-[4rem] overflow-hidden border border-gray-100 shadow-sm">
-                <img
-                    src={service.image}
-                    alt={service.name}
-                    className="w-full aspect-video object-cover"
-                />
+                {/* Carousel Area */}
+                <div
+                    className="relative aspect-video overflow-hidden bg-gray-50 touch-pan-y group"
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    <img
+                        src={getOptimizedImageUrl(allImages[currentImageIndex], { width: 1200, quality: 75 })}
+                        alt={service.name}
+                        className="w-full h-full object-cover transition-opacity duration-300"
+                    />
+
+                    {allImages.length > 1 && (
+                        <>
+                            <button
+                                onClick={prevImage}
+                                className="absolute left-6 top-1/2 -translate-y-1/2 p-4 bg-white/90 backdrop-blur rounded-[1.5rem] shadow-lg text-black lg:opacity-0 lg:group-hover:opacity-100 transition-opacity hover:bg-blue-500 hover:text-white z-10"
+                            >
+                                <ChevronLeft size={24} />
+                            </button>
+                            <button
+                                onClick={nextImage}
+                                className="absolute right-6 top-1/2 -translate-y-1/2 p-4 bg-white/90 backdrop-blur rounded-[1.5rem] shadow-lg text-black lg:opacity-0 lg:group-hover:opacity-100 transition-opacity hover:bg-blue-500 hover:text-white z-10"
+                            >
+                                <ChevronRight size={24} />
+                            </button>
+
+                            {/* Indicators */}
+                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                                {allImages.map((_, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(i); }}
+                                        className={`h-2 rounded-full transition-all ${i === currentImageIndex ? 'w-8 bg-blue-500 shadow-lg' : 'w-2 bg-white/50 backdrop-blur hover:bg-white/80'}`}
+                                        aria-label={`Ir para imagem ${i + 1}`}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
 
                 <div className="p-10 md:p-20 space-y-10">
                     <div className="flex flex-wrap items-center gap-6">
@@ -64,19 +132,24 @@ export const ServiceDetailsPage: React.FC<ServiceDetailsPageProps> = ({ service,
                         <MessageCircle size={24} /> Falar no WhatsApp
                     </button>
 
-                    {service.images && service.images.length > 0 && (
+                    {allImages.length > 1 && (
                         <div className="pt-10 border-t border-gray-100">
                             <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">
-                                Trabalhos Realizados
+                                Trabalhos Realizados ({allImages.length})
                             </h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {service.images.map((img, idx) => (
-                                    <img
+                            <div className="flex flex-wrap gap-4">
+                                {allImages.map((img, idx) => (
+                                    <button
                                         key={idx}
-                                        src={img}
-                                        alt={`Trabalho ${idx}`}
-                                        className="w-full aspect-square object-cover rounded-3xl shadow-sm hover:scale-105 transition-transform"
-                                    />
+                                        onClick={() => setCurrentImageIndex(idx)}
+                                        className={`relative w-24 h-24 rounded-3xl overflow-hidden border-2 transition-all ${idx === currentImageIndex ? 'border-blue-500 scale-110 shadow-lg z-10' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                                    >
+                                        <img
+                                            src={getOptimizedImageUrl(img, { width: 200, quality: 60 })}
+                                            alt={`Miniatura ${idx}`}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </button>
                                 ))}
                             </div>
                         </div>
