@@ -90,7 +90,7 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
 
     const login = async (formData: FormData) => {
         const email = (formData.get('email') as string || '').trim().toLowerCase();
-        const password = (formData.get('password') as string || '').trim();
+        const password = (formData.get('password') as string || '');
 
         console.log('--- [DEBUG AUTH] 1. Iniciando login... ---');
         console.log(`[DEBUG AUTH] 2. Email: ${email}`);
@@ -152,7 +152,7 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
 
     const register = async (formData: FormData, selectedRole: UserRole) => {
         const email = (formData.get('email') as string).trim().toLowerCase();
-        const password = (formData.get('password') as string).trim();
+        const password = (formData.get('password') as string);
         const name = formData.get('name') as string;
 
         try {
