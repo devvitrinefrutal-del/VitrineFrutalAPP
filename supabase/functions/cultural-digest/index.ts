@@ -12,17 +12,22 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    console.log("Iniciando cultural-digest...");
 
-    // 1. Get items from last 7 days
+    if (!RESEND_API_KEY) throw new Error("RESEND_API_KEY não configurada nos Secrets.");
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error("Configurações do Supabase ausentes.");
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // 1. Buscar itens culturais dos últimos 7 dias
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    console.log(`Buscando itens criados após: ${sevenDaysAgo.toISOString()}`);
 
     const { data: items, error: itemsError } = await supabase
       .from("cultural_items")
@@ -30,6 +35,8 @@ serve(async (req) => {
       .gt("created_at", sevenDaysAgo.toISOString());
 
     if (itemsError) throw itemsError;
+    console.log(`Itens encontrados: ${items?.length || 0}`);
+
     if (!items || items.length === 0) {
       return new Response(JSON.stringify({ message: "No new items found" }), {
         status: 200,
@@ -37,7 +44,7 @@ serve(async (req) => {
       });
     }
 
-    // 2. Get all client emails
+    // 2. Buscar e-mails dos clientes
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select("email")
@@ -45,6 +52,7 @@ serve(async (req) => {
 
     if (profilesError) throw profilesError;
     const emails = profiles.map((p: any) => p.email).filter(Boolean);
+    console.log(`Assinantes encontrados: ${emails.length}`);
 
     if (emails.length === 0) {
       return new Response(JSON.stringify({ message: "No subscribers found" }), {
@@ -53,13 +61,13 @@ serve(async (req) => {
       });
     }
 
-    // 3. Build HTML Template
+    // 3. Montar Template HTML
     const itemsHtml = items.map(item => `
       <div style="margin-bottom: 40px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
         <img src="${item.image}" style="width: 100%; border-radius: 20px; margin-bottom: 15px;" />
         <h2 style="font-size: 20px; font-weight: 900; text-transform: uppercase; color: #1a1a1a; margin: 0 0 10px 0;">${item.title}</h2>
-        <p style="font-size: 14px; color: #666; font-weight: 500;">${item.type} • ${new Date(item.date).toLocaleDateString('pt-BR')}</p>
-        <p style="font-size: 14px; color: #444; line-height: 1.6;">${item.description}</p>
+        <p style="font-size: 14px; color: #666; font-weight: 500;">${item.type} • ${item.date ? new Date(item.date).toLocaleDateString('pt-BR') : '-'}</p>
+        <p style="font-size: 14px; color: #444; line-height: 1.6;">${item.description || ''}</p>
       </div>
     `).join('');
 
@@ -72,7 +80,6 @@ serve(async (req) => {
           body { font-family: sans-serif; background-color: #f9f9f9; padding: 20px; margin: 0; }
           .container { max-width: 600px; background: #fff; margin: 20px auto; border-radius: 40px; overflow: hidden; border: 1px solid #eee; padding: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
           .btn { display: inline-block; padding: 18px 36px; background-color: #10b981; color: #ffffff !important; text-decoration: none; border-radius: 18px; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }
-          @media (max-width: 480px) { .container { padding: 20px; border-radius: 30px; } }
         </style>
       </head>
       <body>
@@ -81,23 +88,17 @@ serve(async (req) => {
              <h1 style="font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -1.5px; color: #000; margin: 0;">Vitrine<span style="color: #10b981;">Frutal</span></h1>
              <p style="color: #999; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-top: 5px;">Giro Cultural • Resumo Semanal</p>
           </div>
-          
-          <div style="margin-bottom: 40px; text-align: center;">
-            <p style="font-size: 16px; color: #333; font-weight: 600;">E aí, curioso? Veja o que chegou de novo na cena cultural de Frutal!</p>
-          </div>
-
           ${itemsHtml}
-
           <div style="text-align: center; margin-top: 40px;">
             <a href="https://vitrine-frutal.vercel.app/cultural" class="btn">Ver Todos os Eventos</a>
-            <p style="margin-top: 25px; color: #aaa; font-size: 11px;">Você recebeu este e-mail porque está cadastrado na Vitrine Frutal.</p>
           </div>
         </div>
       </body>
       </html>
     `;
 
-    // 4. Send via Resend
+    // 4. Enviar via Resend
+    console.log("Enviando e-mail via Resend...");
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -113,12 +114,19 @@ serve(async (req) => {
     });
 
     const resData = await res.json();
-    return new Response(JSON.stringify(resData), {
+    console.log("Resposta do Resend:", JSON.stringify(resData));
+
+    if (!res.ok) {
+      throw new Error(`Erro no Resend: ${resData.message || JSON.stringify(resData)}`);
+    }
+
+    return new Response(JSON.stringify({ success: true, data: resData }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
 
   } catch (error) {
+    console.error("Erro fatal na função:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
