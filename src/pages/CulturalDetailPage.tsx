@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, X, Maximize2 } from 'lucide-react';
 import { CulturalItem } from '../../types';
 import { getOptimizedImageUrl } from '../utils/storageUtils';
 
@@ -11,17 +11,18 @@ interface CulturalDetailPageProps {
 export const CulturalDetailPage: React.FC<CulturalDetailPageProps> = ({ item, onBack }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
     const allImages = item.images && item.images.length > 0
         ? item.images
         : [item.image];
 
-    const nextImage = (e?: React.MouseEvent) => {
+    const nextImage = (e?: React.MouseEvent | React.TouchEvent) => {
         e?.stopPropagation();
         setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
     };
 
-    const prevImage = (e?: React.MouseEvent) => {
+    const prevImage = (e?: React.MouseEvent | React.TouchEvent) => {
         e?.stopPropagation();
         setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
     };
@@ -52,15 +53,20 @@ export const CulturalDetailPage: React.FC<CulturalDetailPageProps> = ({ item, on
             <div className="bg-white rounded-[4rem] overflow-hidden border border-gray-100 shadow-sm">
                 {/* Carousel Area */}
                 <div
-                    className="relative aspect-video overflow-hidden bg-gray-50 touch-pan-y group"
+                    className="relative aspect-video overflow-hidden bg-gray-50 touch-pan-y group cursor-zoom-in"
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
+                    onClick={() => setIsLightboxOpen(true)}
                 >
                     <img
                         src={getOptimizedImageUrl(allImages[currentImageIndex], { width: 1200, quality: 75 })}
                         alt={item.title}
                         className="w-full h-full object-cover transition-opacity duration-300"
                     />
+
+                    <div className="absolute top-6 right-6 p-2 bg-black/20 backdrop-blur-sm rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Maximize2 size={20} />
+                    </div>
 
                     {allImages.length > 1 && (
                         <>
@@ -108,7 +114,6 @@ export const CulturalDetailPage: React.FC<CulturalDetailPageProps> = ({ item, on
                         {item.description}
                     </p>
 
-                    {/* Mini thumbnails for gallery selection if multiple images */}
                     {allImages.length > 1 && (
                         <div className="pt-10 border-t border-gray-100">
                             <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">
@@ -133,6 +138,50 @@ export const CulturalDetailPage: React.FC<CulturalDetailPageProps> = ({ item, on
                     )}
                 </div>
             </div>
+
+            {/* Lightbox Modal */}
+            {isLightboxOpen && (
+                <div className="fixed inset-0 z-[200] bg-black/95 flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
+                    <button
+                        onClick={() => setIsLightboxOpen(false)}
+                        className="absolute top-8 right-8 p-4 text-white/70 hover:text-white bg-white/10 rounded-full transition-all hover:rotate-90 z-[210]"
+                    >
+                        <X size={32} />
+                    </button>
+
+                    <div className="relative w-full h-full flex items-center justify-center select-none">
+                        {allImages.length > 1 && (
+                            <>
+                                <button
+                                    onClick={prevImage}
+                                    className="absolute left-4 p-4 text-white bg-white/10 rounded-full hover:bg-white/20 transition-all z-[210]"
+                                >
+                                    <ChevronLeft size={48} />
+                                </button>
+                                <button
+                                    onClick={nextImage}
+                                    className="absolute right-4 p-4 text-white bg-white/10 rounded-full hover:bg-white/20 transition-all z-[210]"
+                                >
+                                    <ChevronRight size={48} />
+                                </button>
+                            </>
+                        )}
+
+                        <img
+                            src={getOptimizedImageUrl(allImages[currentImageIndex], { width: 2000, quality: 90 })}
+                            alt="Visualização completa"
+                            className="max-w-full max-h-[90vh] object-contain shadow-2xl"
+                            onTouchStart={handleTouchStart}
+                            onTouchEnd={handleTouchEnd}
+                        />
+
+                        {/* Caption/Counter */}
+                        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur px-6 py-2 rounded-full text-white font-black text-xs uppercase tracking-widest">
+                            Imagem {currentImageIndex + 1} de {allImages.length}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
