@@ -132,7 +132,11 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
             }
 
             if (data.user) {
-                showSuccess('Conta criada! Aguarde a aprovação do administrador para acessar.');
+                if (selectedRole === 'CLIENTE') {
+                    showSuccess('Conta de cliente criada! Você já pode entrar.');
+                } else {
+                    showSuccess('Conta criada! Aguarde a aprovação do administrador para acessar.');
+                }
                 setShowAuthModal(false);
                 // Opcional: Se quiser logar automaticamente clientes (que não precisam de aprovação)
                 // Mas no seu caso, melhor manter o padrão de aprovação se todos caem no is_active=false
