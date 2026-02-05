@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowLeft, Star, Store as StoreIcon, MapPin } from 'lucide-react';
 import { Store, Product, StoreRating } from '../../types';
 import { ProductCard } from '../components/business/ProductCard';
+import { ProductDetailsModal } from '../components/modals/ProductDetailsModal';
 
 interface StoreDetailsPageProps {
     store: Store;
@@ -20,6 +21,9 @@ export const StoreDetailsPage: React.FC<StoreDetailsPageProps> = ({
 }) => {
     const storeRatings = allRatings.filter(r => r.storeId === store.id);
     const avgRating = storeRatings.length > 0 ? storeRatings.reduce((s, r) => s + r.rating, 0) / storeRatings.length : 0;
+
+    const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
+    const [showProductDetails, setShowProductDetails] = React.useState(false);
 
     return (
         <div className="space-y-10 animate-in fade-in pb-20">
@@ -58,10 +62,18 @@ export const StoreDetailsPage: React.FC<StoreDetailsPageProps> = ({
                         key={product.id}
                         product={product}
                         onAddToCart={onAddToCart}
+                        onClick={(prod) => { setSelectedProduct(prod); setShowProductDetails(true); }}
                         className="h-full"
                     />
                 ))}
             </div>
+
+            <ProductDetailsModal
+                isOpen={showProductDetails}
+                onClose={() => setShowProductDetails(false)}
+                product={selectedProduct}
+                onAddToCart={onAddToCart}
+            />
         </div>
     );
 };

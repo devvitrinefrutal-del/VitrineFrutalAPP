@@ -4,6 +4,7 @@ import { Store, Product, StoreRating } from '../../types';
 import { Logo } from '../components/ui/Logo';
 import { ProductCard } from '../components/business/ProductCard';
 import { StoreCard } from '../components/business/StoreCard';
+import { ProductDetailsModal } from '../components/modals/ProductDetailsModal';
 
 interface VitrinePageProps {
     stores: Store[];
@@ -27,6 +28,8 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
     const [isSearching, setIsSearching] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [priceRange, setPriceRange] = useState<{ min: string, max: string }>({ min: '', max: '' });
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [showProductDetails, setShowProductDetails] = useState(false);
 
     const categories = [
         { name: 'Todas', icon: '🏪' },
@@ -198,6 +201,7 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
                                         product={p}
                                         storeName={store?.name}
                                         onAddToCart={onAddToCart}
+                                        onClick={(prod) => { setSelectedProduct(prod); setShowProductDetails(true); }}
                                     />
                                 );
                             })}
@@ -235,6 +239,13 @@ export const VitrinePage: React.FC<VitrinePageProps> = ({
                     </div>
                 </div >
             )}
+
+            <ProductDetailsModal
+                isOpen={showProductDetails}
+                onClose={() => setShowProductDetails(false)}
+                product={selectedProduct}
+                onAddToCart={onAddToCart}
+            />
         </div >
     );
 };

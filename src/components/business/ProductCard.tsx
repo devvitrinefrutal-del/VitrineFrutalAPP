@@ -13,16 +13,29 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     product,
     storeName,
     onAddToCart,
+    onClick,
     className = ''
 }) => {
+    const hasMultipleImages = product.images && product.images.length > 1;
+
     return (
-        <div className={`bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col group hover:shadow-xl transition-all ${className}`}>
+        <div
+            onClick={() => onClick?.(product)}
+            className={`bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex flex-col group hover:shadow-xl transition-all cursor-pointer ${className}`}
+        >
             <div className="relative overflow-hidden rounded-2xl mb-4 aspect-square">
                 <img
                     src={product.image}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
+
+                {hasMultipleImages && (
+                    <div className="absolute top-2 right-2 px-2.5 py-1 bg-black/50 backdrop-blur rounded-lg text-[8px] font-black text-white uppercase tracking-widest shadow-lg">
+                        +{product.images!.length} fotos
+                    </div>
+                )}
+
                 {storeName && (
                     <div className="absolute bottom-2 left-2 px-3 py-1 bg-white/90 backdrop-blur rounded-lg shadow-sm text-[8px] font-black uppercase tracking-widest text-black/70">
                         {storeName}
@@ -43,8 +56,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                         onAddToCart(product);
                     }}
                     className={`p-2 rounded-xl transition-all shadow-lg active:scale-95 flex items-center gap-1 ${product.stock <= 0
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-gray-900 text-white hover:bg-orange-500 shadow-gray-200'
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-900 text-white hover:bg-orange-500 shadow-gray-200'
                         }`}
                     title={product.stock <= 0 ? "Produto sem estoque" : "Adicionar ao carrinho"}
                 >
