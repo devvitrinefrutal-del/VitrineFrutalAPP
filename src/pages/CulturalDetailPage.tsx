@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import { CulturalItem } from '../../types';
+import { getOptimizedImageUrl } from '../utils/storageUtils';
 
 interface CulturalDetailPageProps {
     item: CulturalItem;
@@ -18,7 +19,7 @@ export const CulturalDetailPage: React.FC<CulturalDetailPageProps> = ({ item, on
                 Voltar ao Giro
             </button>
             <div className="bg-white rounded-[4rem] overflow-hidden border border-gray-100 shadow-sm">
-                <img src={item.image} alt={item.title} className="w-full aspect-video object-cover" />
+                <img src={getOptimizedImageUrl(item.image, { width: 1200, quality: 75 })} alt={item.title} className="w-full aspect-video object-cover" />
                 <div className="p-10 md:p-20 space-y-10">
                     <div className="flex items-center gap-6">
                         <span className="px-6 py-2 bg-emerald-100 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest">
@@ -43,7 +44,7 @@ export const CulturalDetailPage: React.FC<CulturalDetailPageProps> = ({ item, on
                                 {item.images.map((img, idx) => (
                                     <img
                                         key={idx}
-                                        src={img}
+                                        src={getOptimizedImageUrl(img, { width: 400, quality: 70 })}
                                         alt={`Galeria ${idx}`}
                                         className="w-full aspect-square object-cover rounded-3xl shadow-sm hover:scale-105 transition-transform"
                                     />

@@ -105,3 +105,12 @@ export interface StoreRating {
   comment?: string;
   createdAt: string;
 }
+export interface NewsItem {
+  id: string;
+  title: string;
+  category: 'Cidade' | 'Comércio' | 'Utilidade Pública';
+  content: string;
+  image?: string;
+  images?: string[];
+  createdAt: string;
+}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Star, ChevronRight, Truck } from 'lucide-react';
 import { Store, StoreRating } from '../../../types';
+import { getOptimizedImageUrl } from '../../utils/storageUtils';
 
 interface StoreCardProps {
     store: Store;
@@ -19,7 +20,7 @@ export const StoreCard: React.FC<StoreCardProps> = ({ store, ratings, onClick })
         >
             <div className="w-full sm:w-1/2 aspect-video sm:aspect-square overflow-hidden relative">
                 <img
-                    src={store.image}
+                    src={getOptimizedImageUrl(store.image, { width: 600, quality: 70 })}
                     alt={store.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                 />

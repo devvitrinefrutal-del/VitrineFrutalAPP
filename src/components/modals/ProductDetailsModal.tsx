@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, ChevronLeft, ChevronRight, Plus, ShoppingBag } from 'lucide-react';
 import { Product } from '../../../types';
 import { Modal } from '../ui/Modal';
+import { getOptimizedImageUrl } from '../../utils/storageUtils';
 
 interface ProductDetailsModalProps {
     isOpen: boolean;
@@ -59,7 +60,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
                     onTouchEnd={handleTouchEnd}
                 >
                     <img
-                        src={allImages[currentImageIndex]}
+                        src={getOptimizedImageUrl(allImages[currentImageIndex], { width: 800, quality: 75 })}
                         alt={product.name}
                         className="w-full h-full object-cover transition-opacity duration-300"
                     />

@@ -28,7 +28,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose
         if (authMode === 'LOGIN') {
             onLogin(fd);
         } else {
-            onRegister(fd, selectedRole);
+            onRegister(fd, 'CLIENTE');
         }
     };
 
@@ -115,7 +115,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose
                         <button onClick={() => setAuthMode('SELECTION')} className="text-green-600 font-bold text-sm hover:underline">← Voltar</button>
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-green-100 rounded-lg text-green-600"><Plus size={20} /></div>
-                            <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase tracking-widest text-sm">Novo Cadastro</h2>
+                            <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase tracking-widest text-sm">Cadastro de Cliente</h2>
                         </div>
                         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                             <input required name="name" type="text" placeholder="Seu nome completo" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-green-200 transition-all" />

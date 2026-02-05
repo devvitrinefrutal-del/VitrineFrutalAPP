@@ -1,11 +1,13 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { Product } from '../../../types';
+import { getOptimizedImageUrl } from '../../utils/storageUtils';
 
 interface ProductCardProps {
     product: Product;
     storeName?: string;
     onAddToCart: (product: Product) => void;
+    onClick?: (product: Product) => void; // Added missing onClick prop if it's used in parent
     className?: string;
 }
 
@@ -25,7 +27,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         >
             <div className="relative overflow-hidden rounded-2xl mb-4 aspect-square">
                 <img
-                    src={product.image}
+                    src={getOptimizedImageUrl(product.image, { width: 400, quality: 70 })}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />

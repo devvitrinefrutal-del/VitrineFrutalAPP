@@ -84,17 +84,25 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         try {
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
-                console.error('[AUTH] Erro Auth:', error.message);
+                console.error('[AUTH] Erro signInWithPassword:', error.message);
                 showError(error.message.includes('Invalid login') ? 'E-mail ou senha incorretos.' : error.message);
                 return;
             }
 
-            console.log('[AUTH] Logado com sucesso! Buscando perfil...');
+            if (!data.user) {
+                console.error('[AUTH] Login bem-sucedido mas data.user é nulo');
+                showError('Erro interno no servidor de autenticação.');
+                return;
+            }
+
+            console.log(`[AUTH] Logado como ${data.user.email} (ID: ${data.user.id}). Buscando perfil...`);
             const profile = await fetchProfileNativo(data.user.id);
 
             if (profile) {
+                console.log(`[AUTH] Perfil encontrado: ${profile.name} (Papel: ${profile.role}, Ativo: ${profile.is_active})`);
                 const needsApproval = ['LOJISTA', 'PRESTADOR'].includes(profile.role);
                 if (needsApproval && profile.is_active === false) {
+                    console.warn(`[AUTH] Acesso negado: Perfil ${profile.role} inativo.`);
                     await supabase.auth.signOut();
                     showError('Sua conta está aguardando aprovação do administrador.');
                     return;
@@ -103,10 +111,11 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
                 setShowAuthModal(false);
                 showSuccess('Login realizado!');
             } else {
-                showError('Perfil não encontrado. Tente novamente.');
+                console.error(`[AUTH] PERIGO: Perfil não encontrado na tabela public.profiles para o UID: ${data.user.id}`);
+                showError('Perfil não encontrado. Tente novamente em alguns segundos ou contate o suporte.');
             }
         } catch (err: any) {
-            console.error('[AUTH] Erro fatal no login:', err);
+            console.error('[AUTH] Erro fatal inesperado no login:', err);
             showError('Erro de conexão no login.');
         }
     };
@@ -133,14 +142,9 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
             }
 
             if (data.user) {
-                if (selectedRole === 'CLIENTE') {
-                    showSuccess('Conta de cliente criada! Você já pode entrar.');
-                } else {
-                    showSuccess('Conta criada! Aguarde a aprovação do administrador para acessar.');
-                }
+                console.log(`[AUTH] Registro concluído para ${email}. Perfil CLIENTE será criado via trigger.`);
+                showSuccess('Conta de cliente criada! Você já pode entrar.');
                 setShowAuthModal(false);
-                // Opcional: Se quiser logar automaticamente clientes (que não precisam de aprovação)
-                // Mas no seu caso, melhor manter o padrão de aprovação se todos caem no is_active=false
             }
         } catch (err: any) {
             showError('Erro ao registrar.');
