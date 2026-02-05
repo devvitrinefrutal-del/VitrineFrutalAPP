@@ -31,24 +31,16 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         }
     }, [currentUser, rememberMe]);
 
-    // Helper for profile fetch using the official client (respects RLS)
     const fetchProfile = async (userId: string): Promise<User | null> => {
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
+            const query = supabase.from('profiles').select('*').eq('id', userId).single();
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 8000));
 
-            if (error) {
-                if (error.code !== 'PGRST116') {
-                    console.error('[AUTH] Erro ao buscar perfil:', error.message);
-                }
-                return null;
-            }
+            const { data, error } = await Promise.race([query, timeout]) as any;
+
+            if (error) return null;
             return data as User;
         } catch (e) {
-            console.error('[AUTH] Erro inesperado ao buscar perfil:', e);
             return null;
         }
     };
@@ -83,15 +75,23 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         const email = (formData.get('email') as string || '').trim().toLowerCase();
         const password = (formData.get('password') as string || '');
 
+        console.log('[SISTEMA] Tentando login...');
+
         try {
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            const loginPromise = supabase.auth.signInWithPassword({ email, password });
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 12000));
+
+            const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
 
             if (error) {
                 showError(error.message.includes('Invalid login') ? 'E-mail ou senha incorretos.' : error.message);
                 return;
             }
 
-            if (!data.user) return;
+            if (!data?.user) {
+                showError('Usuário não encontrado.');
+                return;
+            }
 
             const profile = await fetchProfile(data.user.id);
 
@@ -99,7 +99,7 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
                 const needsApproval = ['LOJISTA', 'PRESTADOR'].includes(profile.role);
                 if (needsApproval && profile.is_active === false) {
                     await supabase.auth.signOut();
-                    showError('Sua conta está aguardando aprovação.');
+                    showError('Aguardando aprovação.');
                     return;
                 }
                 setCurrentUser(profile);
@@ -108,9 +108,9 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
             } else {
                 showError('Perfil não encontrado.');
             }
-        } catch (err) {
-            console.error('[AUTH] Erro fatal:', err);
-            showError('Erro de conexão no login.');
+        } catch (err: any) {
+            console.error('[AUTH] Falha:', err.message);
+            showError('A conexão falhou ou demorou demais. Tente novamente.');
         }
     };
 
