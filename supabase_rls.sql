@@ -48,12 +48,12 @@ CREATE POLICY "Public Read Products" ON public.products FOR SELECT USING (true);
 CREATE POLICY "Public Read Services" ON public.services FOR SELECT USING (true);
 CREATE POLICY "Public Read Cultural" ON public.cultural_items FOR SELECT USING (true);
 
--- Escrita restrita aos Donos das Lojas
+-- Escrita restrita aos Donos das Lojas (ou ao portador do e-mail da loja para vinculação inicial)
 CREATE POLICY "Store Owners Manage Stores" ON public.stores 
     FOR ALL 
     TO authenticated 
-    USING (owner_id = auth.uid()) 
-    WITH CHECK (owner_id = auth.uid());
+    USING (owner_id = auth.uid() OR email = (auth.jwt() ->> 'email')) 
+    WITH CHECK (owner_id = auth.uid() OR email = (auth.jwt() ->> 'email'));
 
 CREATE POLICY "Store Owners Manage Products" ON public.products 
     FOR ALL 

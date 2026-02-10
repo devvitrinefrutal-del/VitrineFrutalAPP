@@ -132,7 +132,10 @@ function App() {
   } = useCart();
 
   // Derived State
-  const currentStore = data.stores.find(s => s.ownerId === currentUser?.id) || null;
+  const currentStore = data.stores.find(s =>
+    s.ownerId === currentUser?.id ||
+    (currentUser?.email && s.email?.toLowerCase() === currentUser.email.toLowerCase())
+  ) || null;
 
   // Determine Active Tab for Header
   const getActiveTab = (path: string) => {

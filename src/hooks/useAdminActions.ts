@@ -39,7 +39,8 @@ export function useAdminActions(
                         .update({
                             name: updatedUser.name,
                             delivery_fee: deliveryFee,
-                            image: uploadedStoreLogo || undefined
+                            image: uploadedStoreLogo || undefined,
+                            owner_id: user.id
                         })
                         .eq('id', currentStore.id);
 
@@ -209,7 +210,9 @@ export function useAdminActions(
             console.log('[DEBUG saveStore] Payload Final:', data);
 
             if (editingStore) {
-                const { error } = await supabase.from('stores').update(data).eq('id', editingStore.id);
+                const { error } = await supabase.from('stores')
+                    .update({ ...data, owner_id: user?.id })
+                    .eq('id', editingStore.id);
                 if (error) throw error;
 
                 setters.setStores(prev => prev.map(s => s.id === editingStore.id ? {
