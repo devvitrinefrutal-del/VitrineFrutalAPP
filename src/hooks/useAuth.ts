@@ -5,7 +5,7 @@ import { User, UserRole } from '../../types';
 export function useAuth(showSuccess: (msg: string) => void, showError: (msg: string) => void) {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [rememberMe, setRememberMe] = useState(false);
-    const [authMode, setAuthMode] = useState<'SELECTION' | 'LOGIN' | 'REGISTER'>('SELECTION');
+    const [authMode, setAuthMode] = useState<'SELECTION' | 'LOGIN' | 'REGISTER' | 'RECOVER' | 'UPDATE_PASSWORD'>('SELECTION');
     const [showAuthModal, setShowAuthModal] = useState(false);
 
     // Restore session
@@ -47,7 +47,22 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
 
     // Supabase Auth Listener
     useEffect(() => {
+        // Check URL for recovery hash manually as fallback
+        if (window.location.hash.includes('type=recovery')) {
+            console.log('[AUTH] Hash de recuperação detectado manualmente!');
+            setAuthMode('UPDATE_PASSWORD');
+            setShowAuthModal(true);
+        }
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log(`[AUTH EVENTO] ${event}`, session?.user?.email);
+
+            if (event === 'PASSWORD_RECOVERY') {
+                console.log('[AUTH] Recuperação detectada! Abrindo modal...');
+                setAuthMode('UPDATE_PASSWORD');
+                setShowAuthModal(true);
+            }
+
             if (session?.user) {
                 const profile = await fetchProfile(session.user.id);
                 if (profile) setCurrentUser(profile);
@@ -145,8 +160,40 @@ export function useAuth(showSuccess: (msg: string) => void, showError: (msg: str
         }
     };
 
+    const recoverPassword = async (email: string) => {
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/`,
+            });
+            if (error) {
+                showError(error.message);
+                return;
+            }
+            showSuccess('E-mail de recuperação enviado!');
+            setAuthMode('LOGIN');
+        } catch (err: any) {
+            showError('Erro ao enviar e-mail de recuperação.');
+        }
+    };
+
+    const updatePassword = async (formData: FormData) => {
+        const password = formData.get('password') as string;
+        try {
+            const { error } = await supabase.auth.updateUser({ password });
+            if (error) {
+                showError(error.message);
+                return;
+            }
+            showSuccess('Senha atualizada com sucesso!');
+            setAuthMode('LOGIN');
+        } catch (err: any) {
+            showError('Erro ao atualizar senha.');
+        }
+    };
+
     return {
         currentUser, rememberMe, setRememberMe, authMode, setAuthMode,
-        showAuthModal, setShowAuthModal, login, logout, register
+        showAuthModal, setShowAuthModal, login, logout, register,
+        recoverPassword, updatePassword
     };
 }

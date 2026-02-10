@@ -6,6 +6,8 @@ interface AuthPageProps {
     onLogin: (formData: FormData) => void;
     onRegister: (formData: FormData, role: UserRole) => void;
     onClose: () => void;
+    recoverPassword: (email: string) => void;
+    updatePassword: (formData: FormData) => void;
 }
 
 const RoleCard = ({ icon, title, onClick }: { icon: React.ReactNode, title: string, onClick: () => void }) => (
@@ -15,8 +17,8 @@ const RoleCard = ({ icon, title, onClick }: { icon: React.ReactNode, title: stri
     </button>
 );
 
-export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose }) => {
-    const [authMode, setAuthMode] = useState<'SELECTION' | 'LOGIN' | 'REGISTER'>('SELECTION');
+export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose, recoverPassword, updatePassword }) => {
+    const [authMode, setAuthMode] = useState<'SELECTION' | 'LOGIN' | 'REGISTER' | 'RECOVER' | 'UPDATE_PASSWORD'>('SELECTION');
     const [selectedRole, setSelectedRole] = useState<UserRole>('CLIENTE');
     const [showEmail, setShowEmail] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -32,8 +34,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose
         try {
             if (authMode === 'LOGIN') {
                 await onLogin(fd);
-            } else {
+            } else if (authMode === 'REGISTER') {
                 await onRegister(fd, 'CLIENTE');
+            } else if (authMode === 'RECOVER') {
+                const email = fd.get('email') as string;
+                await recoverPassword(email);
+            } else if (authMode === 'UPDATE_PASSWORD') {
+                await updatePassword(fd);
             }
         } finally {
             setIsLoading(false);
@@ -113,7 +120,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose
                                 {isLoading ? 'Autenticando...' : 'Entrar agora'}
                             </button>
                         </form>
-                        <div className="pt-4 text-center border-t border-gray-100">
+                        <div className="pt-4 text-center border-t border-gray-100 flex flex-col gap-3">
+                            <button
+                                onClick={() => setAuthMode('RECOVER')}
+                                className="text-orange-500 font-bold text-[10px] uppercase tracking-widest hover:underline"
+                            >
+                                Esqueceu a senha? <span className="text-gray-400">Clique para recuperar</span>
+                            </button>
                             <button
                                 onClick={() => setAuthMode('REGISTER')}
                                 className="text-gray-400 font-bold text-[10px] uppercase tracking-widest hover:text-orange-600"
@@ -164,6 +177,52 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onRegister, onClose
                                 Já possui conta? <span className="text-green-500 underline">Faça login aqui</span>
                             </button>
                         </div>
+                    </div>
+                )}
+
+                {authMode === 'RECOVER' && (
+                    <div className="space-y-6">
+                        <button onClick={() => setAuthMode('LOGIN')} className="text-orange-600 font-bold text-sm hover:underline">← Voltar</button>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><UserIcon size={20} /></div>
+                            <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase tracking-widest text-sm">Recuperar Senha</h2>
+                        </div>
+                        <p className="text-xs text-gray-500 font-medium">Insira seu e-mail para receber um link de redefinição.</p>
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                            <input required name="email" type="email" placeholder="Seu e-mail cadastrado" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-orange-200 transition-all" />
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full py-4 bg-orange-500 text-white font-black rounded-2xl hover:bg-orange-600 shadow-xl transition-all mt-4 uppercase tracking-widest text-xs disabled:bg-gray-300"
+                            >
+                                {isLoading ? 'Enviando...' : 'Enviar Link de Recuperação'}
+                            </button>
+                        </form>
+                    </div>
+                )}
+
+                {authMode === 'UPDATE_PASSWORD' && (
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><ShieldCheck size={20} /></div>
+                            <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase tracking-widest text-sm">Nova Senha</h2>
+                        </div>
+                        <p className="text-xs text-gray-500 font-medium">Defina sua nova senha de acesso.</p>
+                        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                            <div className="relative group">
+                                <input required name="password" type={showPassword ? "text" : "password"} placeholder="Digite sua nova senha" className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl outline-none font-semibold text-black focus:ring-2 focus:ring-blue-200 transition-all pr-12" />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors">
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 shadow-xl transition-all mt-4 uppercase tracking-widest text-xs disabled:bg-gray-300"
+                            >
+                                {isLoading ? 'Atualizando...' : 'Confirmar Nova Senha'}
+                            </button>
+                        </form>
                     </div>
                 )}
             </div>

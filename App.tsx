@@ -116,7 +116,9 @@ function App() {
     setShowAuthModal,
     login,
     logout,
-    register
+    register,
+    recoverPassword,
+    updatePassword
   } = useAuth(showSuccess, showError);
 
   const data = useData(showError);
@@ -291,6 +293,7 @@ function App() {
                   showError={showError}
                   stores={data.stores}
                   fetchStoreProducts={data.fetchStoreProducts}
+                  onUpdatePassword={updatePassword}
                 />
               ) : <Navigate to="/" />
             } />
@@ -314,6 +317,8 @@ function App() {
           onLogin={login}
           onRegister={register}
           onClose={() => setShowAuthModal(false)}
+          recoverPassword={recoverPassword}
+          updatePassword={updatePassword}
         />
       )}
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store as StoreIcon, Heart,
     User as UserIcon, Plus, Edit2, Trash2, Calendar, MapPin, DollarSign, Image as ImageIcon,
-    CheckCircle, X, Star
+    CheckCircle, X, Star, ShieldCheck
 } from 'lucide-react';
 import { User, Store, Product, Service, CulturalItem, Order } from '../../types';
 import { OrderManager } from '../components/business/OrderManager';
@@ -24,6 +24,7 @@ interface DashboardPageProps {
     showError: (msg: string) => void;
     stores: Store[]; // Need full list for some checks?
     fetchStoreProducts: (storeId: string) => void;
+    onUpdatePassword: (formData: FormData) => void;
 }
 
 const NavBtn = ({ active, icon, label, onClick }: { active: boolean, icon: React.ReactNode, label: string, onClick: () => void }) => (
@@ -41,7 +42,7 @@ const NavBtn = ({ active, icon, label, onClick }: { active: boolean, icon: React
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
     user, currentStore, products, services, culturalItems, orders, activeTab,
-    onLogout, actions, showError, stores, fetchStoreProducts
+    onLogout, actions, showError, stores, fetchStoreProducts, onUpdatePassword
 }) => {
     // Internal Navigation State
     const [section, setSection] = useState('OVERVIEW');
@@ -190,6 +191,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                             <NavBtn active={section === 'OVERVIEW'} icon={<LayoutDashboard size={20} />} label="Visão Geral" onClick={() => setSection('OVERVIEW')} />
                             <NavBtn active={section === 'PRODUCTS'} icon={<Package size={20} />} label="Produtos" onClick={() => setSection('PRODUCTS')} />
                             <NavBtn active={section === 'STOCK'} icon={<ShoppingBag size={20} />} label="Estoque" onClick={() => setSection('STOCK')} />
+                            <NavBtn active={section === 'PROFILE'} icon={<UserIcon size={20} />} label="Meus Dados" onClick={() => setSection('PROFILE')} />
                             <NavBtn active={section === 'SETTINGS'} icon={<Settings size={20} />} label="Configurar Loja" onClick={() => { setModalImages(currentStore?.image ? [currentStore.image] : []); setShowStoreModal(true); }} />
                         </>
                     )}
@@ -671,6 +673,53 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                 </button>
                             </div>
                         </form>
+
+                        {/* --- Password Change Section --- */}
+                        <div className="pt-8 border-t border-gray-100">
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl">
+                                    <ShieldCheck size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-black tracking-tight uppercase">Segurança da Conta</h3>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Altere sua senha de acesso</p>
+                                </div>
+                            </div>
+
+                            <form
+                                onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    setIsSaving(true);
+                                    const fd = new FormData(e.currentTarget);
+                                    await onUpdatePassword(fd);
+                                    setIsSaving(false);
+                                    e.currentTarget.reset();
+                                }}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                            >
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 pl-4">Nova Senha</label>
+                                    <div className="relative">
+                                        <input
+                                            name="password"
+                                            type="password"
+                                            required
+                                            placeholder="Digite a nova senha"
+                                            className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold focus:ring-2 ring-blue-100 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-end">
+                                    <button
+                                        disabled={isSaving}
+                                        type="submit"
+                                        className="w-full md:w-auto px-12 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs"
+                                    >
+                                        {isSaving ? 'Atualizando...' : 'Atualizar Senha'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 )}
             </div>

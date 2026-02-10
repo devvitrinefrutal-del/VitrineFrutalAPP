@@ -226,7 +226,7 @@ export function useAdminActions(
                 } : s));
                 showSuccess('Loja atualizada!');
             } else {
-                const { data: saved, error } = await supabase.from('stores').insert([data]).select();
+                const { data: saved, error } = await supabase.from('stores').insert([{ ...data, owner_id: user?.id }]).select();
                 if (error) throw error;
                 if (saved) {
                     setters.setStores(prev => [...prev, {
