@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     LayoutDashboard, Package, ShoppingBag, Settings, LogOut, Store as StoreIcon, Heart,
     User as UserIcon, Plus, Edit2, Trash2, Calendar, MapPin, DollarSign, Image as ImageIcon,
-    CheckCircle, X, Star, ShieldCheck
+    CheckCircle, X, Star, ShieldCheck, Eye, EyeOff
 } from 'lucide-react';
 import { User, Store, Product, Service, CulturalItem, Order } from '../../types';
 import { OrderManager } from '../components/business/OrderManager';
@@ -79,6 +79,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     // Auxiliary State for non-extracted modals (Store/Service/Cultural)
     const [modalImages, setModalImages] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const [showFinanceModal, setShowFinanceModal] = useState(false);
     const [financeType, setFinanceType] = useState<'DAILY' | 'MONTHLY'>('DAILY');
@@ -702,11 +703,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                                     <div className="relative">
                                         <input
                                             name="password"
-                                            type="password"
+                                            type={showPassword ? "text" : "password"}
                                             required
                                             placeholder="Digite a nova senha"
-                                            className="w-full p-4 bg-gray-50 rounded-2xl outline-none font-bold focus:ring-2 ring-blue-100 transition-all"
+                                            className="w-full p-4 pr-12 bg-gray-50 rounded-2xl outline-none font-bold focus:ring-2 ring-blue-100 transition-all"
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
+                                        >
+                                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                        </button>
                                     </div>
                                 </div>
                                 <div className="flex items-end">
